@@ -11,13 +11,13 @@ These routines and the analysis are very much in progress as of April 2018.
 
 Features coming include:
 
--Conversion of data to log scale
--Dendrogram object creation and analysis
--Plotting, coloring, and creating cutoffs for dendrograms as a heuristic tool
--Creating clusters based on dendrogram objects
--Principal Components Analysis using clusters from dendrogram objects
--Building scree plots to show variance explained
--Exploring eigenvector loadings on PCA
--Using Partitioning Around Mediods based on Silhouette Analysis to compare to HCA clusters
--Visualizing a priorr information about sherds to provide insight to the analysis 
+- Conversion of data to log scale
+- Dendrogram object creation and analysis
+- Plotting, coloring, and creating cutoffs for dendrograms as a heuristic tool
+- Creating clusters based on dendrogram objects
+- Principal Components Analysis using clusters from dendrogram objects
+- Building scree plots to show variance explained
+- Exploring eigenvector loadings on PCA
+- Using Partitioning Around Mediods based on Silhouette Analysis to compare to HCA clusters
+- Visualizing a priorr information about sherds to provide insight to the analysis 
 
