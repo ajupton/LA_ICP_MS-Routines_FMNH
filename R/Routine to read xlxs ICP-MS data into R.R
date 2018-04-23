@@ -70,15 +70,16 @@ dfnames <- df$Sample
 x_detect <- str_detect(dfnames, "X")
 df <- df[!x_detect, ]
 
-# one pesky column name has a note in it, let's get rid of it too
-note <- str_detect(df$Sample, "High")
-df <- df[!note, ]
+# one pesky column name has a note in it, let's get rid of it too 
+# (this method can be used to clean up any columns that have notes/extra text)
+# note <- str_detect(df$Sample, "High")
+# df <- df[!note, ]
 
 # finally we can convert the sample data to numeric to allow for calculations
 df[,3:ncol(df)] <- sapply(df[,3:ncol(df)], as.numeric)
 
 ### At this point, you can jump to the "Percent Oxide to PPM.R" routine or just use the ###
-#   data as i
+#   data as is
 
 # write the full dataframe to a csv
 write_csv(df, "full_data_frame.csv")
