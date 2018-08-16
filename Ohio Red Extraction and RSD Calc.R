@@ -1,0 +1,82 @@
+# Extract Ohio Reds and Calculate Relative Standard Deviation
+
+library(tidyverse)
+library(stringr)
+
+# Import data
+dfall <- read_csv("Upton_results_samples_and_OhioRed_Aug_14_2018.csv")
+
+# Change Sample column to all lower case to ensure complete string detection
+dfall$Sample <- tolower(dfall$Sample)
+
+# Search the sample column for the word Ohio based on the abbreviation oh
+ohio <- str_detect(dfall$Sample, "oh")
+
+# Double check by searching same column for Red
+red <- str_detect(dfall$Sample, "red")
+
+# Check to see if the two detection methods are identical
+sum(ohio == red) == nrow(dfall)
+
+# Index to extract all Ohio Red Samples
+ohioreds <- dfall[red,]
+
+# Function to calculate RSD
+RSD <- function(x){
+  meann <- mean(x)
+  relsd <- sd(x)/meann
+  relsd
+}
+
+# Calculate RSD across the rows
+redRSD <- sapply(ohioreds[, 3:ncol(ohioreds)], RSD)
+
+# Calculate average values across each of the Ohio Reds
+redAVG <- ohioreds %>%
+              gather(element, sample, SiO2:Th) %>%
+              group_by(element) %>%
+              summarize(Avg = mean(sample))
+
+# Plot to check average values
+ohioreds %>%
+  gather(element, sample, SiO2:Th) %>%
+  group_by(Date, element) %>%
+  summarize(AVG = mean(sample)) %>%
+ggplot(aes(x = Date)) + 
+  geom_line(aes(y = AVG, color = element, group = element)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Filter the plot to look at HREE and LREE average values
+ohioreds %>%
+  gather(element, sample, SiO2:Th) %>%
+  group_by(Date, element) %>%
+  summarize(AVG = mean(sample)) %>%
+  filter(AVG < 100) %>%
+  ggplot(aes(x = Date)) + 
+  geom_line(aes(y = AVG, color = element, group = element)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+# Check Bi, which has a very high RSD
+ohioreds %>%
+  gather(element, sample, SiO2:Th) %>%
+  group_by(Date, element) %>%
+  summarize(AVG = mean(sample)) %>%
+  filter(element == "Bi") %>%
+  ggplot(aes(x = Date)) + 
+  geom_line(aes(y = AVG, color = element, group = element)) +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1))
+
+
+# Bind Ohio Red averages to relative standard deviations
+redRSD <- data.frame(redRSD)
+redRSD <- rownames_to_column(redRSD, var = "element")
+OHred_avg_rsd <- left_join(redRSD, redAVG, by = "element")
+
+# Add RSD to the Ohio Red Samples
+red_with_RSD <- bind_rows(ohioreds, redRSD)
+
+write_csv(OHred_avg_rsd, "Ohio Red Averages and RSD.csv")
+write_csv(red_with_RSD, "Ohio Reds with RSD.csv")
