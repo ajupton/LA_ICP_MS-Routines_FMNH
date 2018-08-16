@@ -139,7 +139,7 @@ df$Ti <- ti(df$Ti)
 df$BaO <- bao(df$BaO)
 
 # write the full dataframe to a csv
-write_csv(df, "Upton_results_samples_and_OhioRed_Aug_12_2018.csv")
+write_csv(df, "Upton_results_samples_and_OhioRed_Aug_14_2018.csv")
 
 #now lets get rid of the Ohio Red Samples
 dfsamps <- df$Sample
@@ -148,4 +148,6 @@ df_samples <- df[!orows, ]
 df_samples$Sample
 
 #write csv with samples only, Ohio Red standards removed
-write_csv(df_samples, "Upton_results_samples_calc_Aug_12_2018.csv")
+write_csv(df_samples, "Upton_results_samples_calc_Aug_14_2018.csv")
+
+# From here, work was done in Excel (vlookups, etc.) to clean up the data
