@@ -19,7 +19,8 @@ path <- "~file_name.xlsx"
 # Use map to iterate read_excel over each worksheet in the workbook
 ld <- path %>%
         excel_sheets() %>%
-        set_names() %>%
+        #set_names() %>%   
+        set_names(.,.) %>% # Had error messages from the above line, this fixes the issues
         map(read_excel, path = path)
 
 # Bind the columns in the lists together to form one dataframe
