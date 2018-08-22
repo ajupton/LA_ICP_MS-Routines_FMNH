@@ -83,3 +83,23 @@ red_with_RSD <- bind_rows(ohioreds, redRSD)
 
 write_csv(OHred_avg_rsd, "Ohio Red Averages and RSD_Aug-21-2018.csv")
 write_csv(red_with_RSD, "Ohio Reds with RSD_Aug-21-2018.csv")
+
+# Now check for any differences between samples run on different machines
+ohioreds$Date <- as.POSIXct(paste(ohioreds$Date), format = "%Y-%b-%d", tz = "UTC") 
+redAVG_group <- ohioreds %>%
+                  mutate(Machine = ifelse(Date > as.POSIXct('2016-01-01', tz = "UTC"), 
+                                          "New", "Old")) %>%
+                  gather(element, sample, SiO2:Th) %>%
+                  group_by(Machine, element) %>%
+                  summarize(Avg = mean(sample), SD = sd(sample))
+
+# Count the number of Ohio Red samples run on each machine
+ohioreds %>%
+  mutate(Machine = ifelse(Date > as.POSIXct('2016-01-01', tz = "UTC"), 
+                          "New", "Old")) %>%
+  select(Machine) %>%
+  group_by(Machine) %>%
+  summarize(num = n())
+
+write_csv(redAVG_group, "Ohio Reds across Machines_Aug_22_2018.csv")
+
