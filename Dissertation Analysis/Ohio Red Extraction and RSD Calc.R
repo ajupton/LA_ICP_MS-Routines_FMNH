@@ -83,5 +83,3 @@ red_with_RSD <- bind_rows(ohioreds, redRSD)
 
 write_csv(OHred_avg_rsd, "Ohio Red Averages and RSD_Aug-21-2018.csv")
 write_csv(red_with_RSD, "Ohio Reds with RSD_Aug-21-2018.csv")
-
-names(ohioreds)
