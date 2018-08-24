@@ -11,19 +11,20 @@ library(knitr)
 library(ggfortify)
 
 # Read in full dataset
-all_samples <- read_csv("Upton_results_samples_calc_August_19_2018.csv")
+all_samples <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
+
+# Read in clay context data 
+clay_context <- read_csv("clay context data.csv")
+
+# Clean up clay and clay context sample names
+clay_context$Sample <- str_replace(clay_context$Sample, pattern = "_1" %R% END, "")
+clay$Sample <- str_replace(clay$Sample, pattern = "_1" %R% END, "")
 
 # Each clay sample is named "C##_1"
 # An expedient way of isolating the clay samples
 clay <- arrange(all_samples[str_detect(all_samples$Sample, "C[:digit:]"), ], Sample)
 
-# Write clay samples to their own csv file
-write_csv(clay, "clay sample composition_Aug 20 2018.csv")
-
-# I then added some additional provenance details in Excel. These include
-# drainage name, geography 2 (north/south), and geography 3 (upper, mid, lower)
-# Reading the file back in with additional data
-clay <- read_csv("clay sample composition.csv")
+# Join clay data to clay context
 
 # Take the log of the elemental composition data since they are on very different 
 # scales
