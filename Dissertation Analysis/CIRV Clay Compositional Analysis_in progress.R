@@ -25,18 +25,22 @@ clay$Sample <- str_replace(clay$Sample, pattern = "_1" %R% END, "")
 clay <- arrange(all_samples[str_detect(all_samples$Sample, "C[:digit:]"), ], Sample)
 
 # Join clay data to clay context
+clay <- left_join(clay_context, clay)
 
 # Take the log of the elemental composition data since they are on very different 
 # scales
-claylog <- log(clay[,6:ncol(clay)])
-claylog <- bind_cols(clay[, 1:5], claylog)
-names(clay)
+claylog <- log(clay[,8:ncol(clay)])
+claylog <- bind_cols(clay[, 1:7], claylog)
 
-# Remove problem elements following Golitko (2010) 
+
+###############
+# Pick-up here #
+###############
+
+# Remove problem elements following Golitko (2010) - unreliable measured at EAF
 problem_elements <- c("P", "Sr", "Ba", "Ca", "Hf", "As", "Cl")
 names.use <- names(claylog)[!(names(claylog) %in% problem_elements)]
 claylog_good <- claylog[, names.use]
-names(claylog_good)
 
 # Check to ensure the elements were removed
 anti_join(data.frame(names(clay)), 
