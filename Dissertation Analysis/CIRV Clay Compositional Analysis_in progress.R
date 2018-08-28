@@ -32,6 +32,9 @@ clay <- left_join(clay_context, clay)
 claylog <- log(clay[,8:ncol(clay)])
 claylog <- bind_cols(clay[, 1:7], claylog)
 
+# Number of clay samples analyzed 
+claylog %>%
+  summarise(num = n())
 
 ###############
 # Pick-up here #

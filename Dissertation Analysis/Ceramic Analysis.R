@@ -56,6 +56,17 @@ ceramic_features_by_site <- read_xlsx(path = "ceramic features.xlsx", sheet = 2)
 samples <- left_join(samples, ceramic_features_by_id)
 samples <- left_join(samples, ceramic_features_by_site)
 
+# Number of sherds by site and by vessel type
+samples %>%
+  group_by(Site, Vessel_Class) %>%
+  summarise(num = n())  # %>%
+  # write_csv("Number of sherds by site and by vessel type.csv")
+
+# Number of sherds by site and by cultural group
+samples %>%
+  group_by(Site, Cultural_Group) %>%
+  summarize(num = n())
+
 # Check for any linear relationships between Calcium and the other elements
 # Looks like there are some significant at a 0.05 alpha, but there is a significant
 # amount of heteroscedasticity and residual variation in all but Sr, which
