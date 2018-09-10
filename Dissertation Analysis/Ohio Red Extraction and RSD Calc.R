@@ -5,7 +5,7 @@ library(stringr)
 library(plotly)
 
 # Import data
-dfall <- read_csv("Upton_results_samples_and_OhioRed_shell_corrected_August_21_2018.csv")
+dfall <- read_csv("Upton_results_OhioRed_August_21_2018.csv")
 
 # Change Sample column to all lower case to ensure complete string detection
 dfall$Sample <- tolower(dfall$Sample)
@@ -34,14 +34,14 @@ redRSD <- sapply(ohioreds[, 3:ncol(ohioreds)], RSD)
 
 # Calculate average and standard deviation of values across each of the Ohio Reds
 redAVG <- ohioreds %>%
-              gather(element, sample, SiO2:Th) %>%
+              gather(element, sample, Si:Th) %>%
               group_by(element) %>%
               summarize(Avg = mean(sample), SD = sd(sample))
 
 # Plot to check average values
 ohioreds %>%
-  gather(element, sample, SiO2:Th) %>%
-  group_by(Date, element) %>%
+  gather(element, sample, Si:Th) %>%
+  group_by(element, Date) %>%
   summarize(AVG = mean(sample)) %>%
 ggplot(aes(x = Date)) + 
   geom_line(aes(y = AVG, color = element, group = element)) +
@@ -50,7 +50,7 @@ ggplot(aes(x = Date)) +
 
 # Filter the plot to look at HREE and LREE average values
 p <- ohioreds %>%
-      gather(element, sample, SiO2:Th) %>%
+      gather(element, sample, Si:Th) %>%
       group_by(Date, element) %>%
       summarize(AVG = mean(sample)) %>%
       filter(AVG < 100) %>%
@@ -63,7 +63,7 @@ ggplotly(p)
 
 # Check very high RSD elements
 all_samples %>%
-  gather(element, sample, SiO2:Th) %>%
+  gather(element, sample, Si:Th) %>%
   group_by(Date, element) %>%
   summarize(AVG = mean(sample)) %>%
   filter(element == "Bi") %>%
