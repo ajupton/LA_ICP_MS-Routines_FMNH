@@ -16,13 +16,13 @@ all_samples <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.cs
 # Read in clay context data 
 clay_context <- read_csv("clay context data.csv")
 
-# Clean up clay and clay context sample names
-clay_context$Sample <- str_replace(clay_context$Sample, pattern = "_1" %R% END, "")
-clay$Sample <- str_replace(clay$Sample, pattern = "_1" %R% END, "")
-
 # Each clay sample is named "C##_1"
 # An expedient way of isolating the clay samples
 clay <- arrange(all_samples[str_detect(all_samples$Sample, "C[:digit:]"), ], Sample)
+
+# Clean up clay and clay context sample names
+clay_context$Sample <- str_replace(clay_context$Sample, pattern = "_1" %R% END, "")
+clay$Sample <- str_replace(clay$Sample, pattern = "_1" %R% END, "")
 
 # Join clay data to clay context
 clay <- left_join(clay_context, clay)
@@ -36,27 +36,42 @@ claylog <- bind_cols(clay[, 1:7], claylog)
 claylog %>%
   summarise(num = n())
 
-###############
-# Pick-up here #
-###############
-
-# Remove problem elements following Golitko (2010) - unreliable measured at EAF
+# Remove problem elements. Some elements are known to be unreliably measured using the ICP-MS
+# at the EAF. Following Golitko (2010), these include the following elements. 
 problem_elements <- c("P", "Sr", "Ba", "Ca", "Hf", "As", "Cl")
-names.use <- names(claylog)[!(names(claylog) %in% problem_elements)]
+
+# Other elements such as Ca and Sr are affected by shell tempering. Want to drop those as well. 
+
+# Overall these are the Elements retained - 44 in all.
+elems_retained <- c("Al","B", "Be", "Ce", "Co", "Cr", "Cs", "Dy", "Er", "Eu", "FeO",
+                    "Gd", "Ho", "In", "K", "La", "Li", "Lu", "Mg", "MnO", "Mo", "Na", "Nb", 
+                    "Nd", "Ni", "Pb", "Pr", "Rb", "Sc", "Si", "Sm", "Sn", "Ta", "Tb", "Th", "Ti",
+                    "Tm", "U", "V", "W", "Y", "Yb", "Zn", "Zr")
+
+names.use <- names(claylog)[(names(claylog) %in% elems_retained)]
+# length(names.use) == length(elems_retained) # check that all elements are retained 
 claylog_good <- claylog[, names.use]
 
-# Check to ensure the elements were removed
+# Check to ensure the elements were removed are supposed to be removed
 anti_join(data.frame(names(clay)), 
           data.frame(names(claylog_good)), by = c("names.clay." = "names.claylog_good."))
 
-# Remove one non-clay sample
-claylog_good <- filter(claylog_good, Sample != "C26_1")
+# Need to drop the "O" for oxide after elements measured as %oxide composition since they have 
+# already been converted to ppm
+names(claylog_good) <- c("Si","Na","Mg","Al","K","Mn","Fe","Ti","Li", "Be","B","Sc","V","Cr","Ni",
+                         "Co","Zn","Rb","Zr","Nb","In","Sn","Cs","La","Ce","Pr","Ta","Y","Pb","U",
+                         "W","Mo","Nd","Sm","Eu","Gd","Tb","Dy","Ho","Er","Tm","Yb","Lu","Th") 
+
+# Bind sample id and other data to the logged chemical concentrations 
+clay_pcaready <- bind_cols(claylog[,c(1:7)], claylog_good)
+
+# Remove two non-clay sample
+clay_pcaready <- filter(clay_pcaready, Sample != "C26") %>% filter(Sample != "C31")
 
 # Exploring PCA
-clay_pca <- claylog_good %>% 
+clay_pca <- clay_pcaready %>% 
   nest() %>% 
-  mutate(pca = map(data, ~ prcomp(.x %>% select(Si:Th), 
-                                  center = TRUE, scale = TRUE)),
+  mutate(pca = map(data, ~ prcomp(.x %>% select(Si:Th))),
          pca_aug = map2(pca, data, ~augment(.x, data = .y)))
 
 # Check variance explained by each model
@@ -68,7 +83,7 @@ var_exp <- clay_pca %>%
          cum_var_exp = cumsum(var_exp),
          pc = str_replace(pc, ".fitted", ""))
 
-# Looks like we need to retain the first 9 PC's to hit 90% of the data's variability
+# Looks like we need to retain the first 7 PC's to hit 90% of the data's variability
 # Graphing this out might help
 var_exp %>% 
   rename(`Variance Explained` = var_exp,
@@ -83,11 +98,11 @@ var_exp %>%
   facet_wrap(~key, scales = "free_y") +
   theme_bw() +
   lims(y = c(0, 1)) +
-  labs(y = "Variance",
+  labs(y = "Variance", x = "",
        title = "Variance explained by each principal component")
 
 
-# Plot PCs against each other
+# Plot PCs 1 & 2 against each other
 cp1p2_plot <- clay_pca %>%
         mutate(
           pca_graph = map2(
@@ -106,7 +121,8 @@ cp1p2_plot <- clay_pca %>%
                        frame.level = .9, 
                        frame.alpha = 0.001, 
                        size = 2) +
-              theme_bw() +
+              theme_bw() + 
+              #geom_text(label = .y$Sample) +
               labs(x = "Principal Component 1",
                    y = "Principal Component 2",
                    title = "First two principal components of PCA on CIRV Clay dataset")
@@ -117,11 +133,43 @@ cp1p2_plot <- clay_pca %>%
 # autoplot is lazy with color. In order to make this publication friendly, have to 
 # manually edit the color scales
 cp1p2_plot[[1]] + scale_fill_manual(values = c("black","black")) + 
-  scale_color_manual(values = c("black","black","black"))
+  scale_color_manual(values = c("black","black","black")) 
 
+# Plot PCs 1 & 3 against each other
+cp1p3_plot <- clay_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, x = 1, y = 3, loadings = TRUE, loadings.label = TRUE,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Geography_2", 
+                 shape = "Geography_2",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 2",
+             y = "Principal Component 3",
+             title = "First two principal components of PCA on CIRV Clay dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+# autoplot is lazy with color. In order to make this publication friendly, have to 
+# manually edit the color scales
+cp1p3_plot[[1]] + scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
 
 # Shiny app to biplot the various elements against one another
-# With 46 elements, there are p(p-1)/2 or 1035 biplots to investigate!
+# With 44 elements, there are p(p-1)/2 or 946 biplots to investigate!
 # Therefore, it's a lot easier to make an app to easily and quickly run through the options
 
 ############
