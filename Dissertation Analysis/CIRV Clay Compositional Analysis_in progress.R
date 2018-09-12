@@ -29,7 +29,7 @@ clay <- left_join(clay_context, clay)
 
 # Take the log of the elemental composition data since they are on very different 
 # scales
-claylog <- log(clay[,8:ncol(clay)])
+claylog <- log10(clay[,8:ncol(clay)])
 claylog <- bind_cols(clay[, 1:7], claylog)
 
 # Number of clay samples analyzed 
@@ -67,6 +67,8 @@ clay_pcaready <- bind_cols(claylog[,c(1:7)], claylog_good)
 
 # Remove two non-clay sample
 clay_pcaready <- filter(clay_pcaready, Sample != "C26") %>% filter(Sample != "C31")
+
+#write_csv(clay_pcaready, "Clay PCA Ready.csv")
 
 # Exploring PCA
 clay_pca <- clay_pcaready %>% 
@@ -109,10 +111,12 @@ cp1p2_plot <- clay_pca %>%
             .x = pca,
             .y = data,
             ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
-                       loadings.label.repel = TRUE,
+                       #loadings.label.repel = TRUE,
                        loadings.label.colour = "black",
                        loadings.colour = "gray85",
                        loadings.label.alpha = 0.5,
+                       loadings.label.size = 3,
+                       loadings.label.hjust = 1.1,
                        frame = TRUE,
                        frame.type = "norm",
                        data = .y, 
@@ -156,7 +160,7 @@ cp1p3_plot <- clay_pca %>%
                  size = 2) +
         theme_bw() + 
         #geom_text(label = .y$Sample) +
-        labs(x = "Principal Component 2",
+        labs(x = "Principal Component 1",
              y = "Principal Component 3",
              title = "First two principal components of PCA on CIRV Clay dataset")
     )
@@ -179,11 +183,11 @@ ui <- fluidPage(
 pageWithSidebar (
   headerPanel('Bivariate Plotting'),
   sidebarPanel(
-    selectInput('x', 'X Variable', names(claylog_good), 
-                selected = names(claylog_good)[[7]]),
+    selectInput('x', 'X Variable', names(clay_pcaready), 
+                selected = names(clay_pcaready)[[8]]),
     selectInput('y', 'Y Variable', names(claylog_good),
-                selected = names(claylog_good)[[6]]),
-    selectInput('color', 'Color', names(claylog_good)),
+                selected = names(clay_pcaready)[[9]]),
+    selectInput('color', 'Color', names(clay_pcaready)),
     #Slider for plot height
     sliderInput('plotHeight', 'Height of plot (in pixels)', 
                 min = 100, max = 2000, value = 550)
@@ -210,13 +214,13 @@ server <- function(input, output, session) {
   output$plot1 <- renderPlotly({
     
     #Build plot with ggplot syntax 
-    p <- ggplot(data = claylog, aes_string(x = input$x, 
+    p <- ggplot(data = clay_pcaready, aes_string(x = input$x, 
                                           y = input$y, 
                                           color = input$color, 
                                           shape = input$color)) + 
       geom_point() + 
       theme(legend.title = element_blank()) + 
-      stat_ellipse() +
+      stat_ellipse(level = 0.9) +
       scale_color_igv() + 
       theme_bw() +
       xlab(paste0(input$x, " (log base 10 ppm)")) +
@@ -230,3 +234,54 @@ server <- function(input, output, session) {
 }
 
 shinyApp(ui, server)
+
+# Based on the biplots, it looks like there is good separation for the most part 
+# in the north and south portions of the valley when comparing Lithium to Vanadium or Beryllium
+
+# Biplot of Li and V
+ggplot(data = clay_pcaready, aes(x = Li, y = V, color = Geography_2, shape = Geography_2)) + 
+  geom_point() + 
+  theme(legend.title = element_blank()) + 
+  stat_ellipse(level = 0.9) +
+  scale_color_igv() + 
+  theme_bw() +
+  xlab("Lithium (log base 10 ppm)") +
+  ylab("Vanadium (log base 10 ppm)") +
+  scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
+
+# Biplot of Li and Be
+ggplot(data = clay_pcaready, aes(x = Li, y = Be, color = Geography_2, shape = Geography_2)) + 
+  geom_point() + 
+  theme(legend.title = element_blank()) + 
+  stat_ellipse(level = 0.9) +
+  scale_color_igv() + 
+  theme_bw() +
+  xlab("Lithium (log base 10 ppm)") +
+  ylab("Beryllium (log base 10 ppm)") +
+  scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
+
+# Biplot of Li and Be
+ggplot(data = clay_pcaready, aes(x = Li, y = Be, color = Geography_2, shape = Geography_2)) + 
+  geom_point() + 
+  theme(legend.title = element_blank()) + 
+  stat_ellipse(level = 0.9) +
+  scale_color_igv() + 
+  theme_bw() +
+  xlab("Lithium (log base 10 ppm)") +
+  ylab("Beryllium (log base 10 ppm)") +
+  scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
+
+# Biplot of Ni and Cs
+ggplot(data = clay_pcaready, aes(x = Ni, y = Cs, color = Geography_2, shape = Geography_2)) + 
+  geom_point() + 
+  theme(legend.title = element_blank()) + 
+  stat_ellipse(level = 0.9) +
+  scale_color_igv() + 
+  theme_bw() +
+  xlab("Nickel (log base 10 ppm)") +
+  ylab("Cesium (log base 10 ppm)") +
+  scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
