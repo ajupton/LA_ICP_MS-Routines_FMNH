@@ -9,6 +9,8 @@ library(ggsci)
 library(broom)
 library(knitr)
 library(ggfortify)
+library(stats)
+library(ICSNP)
 
 # Read in full dataset
 all_samples <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
@@ -285,3 +287,102 @@ ggplot(data = clay_pcaready, aes(x = Ni, y = Cs, color = Geography_2, shape = Ge
   ylab("Cesium (log base 10 ppm)") +
   scale_fill_manual(values = c("black","black")) + 
   scale_color_manual(values = c("black","black","black")) 
+
+# It looks like there is a good deal of separation in the geochemistry of clays between the 
+# Northern portion of the central Illinois River Valley (including the Spoon/Illinois confluence) 
+# and the Southern portion of the CIRV, south of the Spoon River
+# But let's check to see if statistical techniques come to a similar conclusion
+
+###__________________________HCA__________________________________________________________###
+# First, we create a data frame for distance calculations including the elemental data only
+clay_for_dist <- claylog_good
+rownames(clay_for_dist) <- claylog$Sample
+
+# Now let's perform some hierarchical clustering using Euclidean distance
+clay_hca <- hclust(dist(clay_for_dist))
+
+# Create dendrogram object
+dend_clay <- as.dendrogram(clay_hca)
+
+# Plot dendogram object to look for good cut-off heights - 2.5 seems to be a good height
+plot(dend_clay, nodePar = list(lab.cex = .75, pch = NA))
+
+# Looks like the hierarchical clustering doesn't group precisely as the geographic/geologic
+# prior knowledge would suggest. This is an indication of the hetergeneous nature of clay as 
+# well as the complex geological processes that have resulted in clay availability in the CIRV.
+
+
+###____________________________Mahalanobis Distance________________________________________###
+# Since HCA wasn't overly insightful, we can at least check membership probabilities between
+# the north and south groups statistically. The standard method of doing this in 
+# archaeology is via Mahalanobis distance, which is commonly used for outlier detection. 
+
+
+# Extract the first 7 PC's (accounting for 90% of variability) and bind to 
+# sample/geography data
+clay_pc1to7 <- clay_pca %>% 
+                  unnest(pca_aug) %>% 
+                  select(starts_with(".fitted")) %>%
+                  bind_cols(clay_pcaready[, c(1,3)], .) %>%
+                  select(c(1:9))
+
+clay1to7_north <- clay_pc1to7 %>% filter(Geography_2 == "North")
+
+clay1to7_south <- clay_pc1to7 %>% filter(Geography_2 == "South")
+      
+# Edit colnames
+colnames(clay_pc1to7) <- str_remove(colnames(clay_pc1to7), ".fitted")
+
+# Mahalanobis distance of North to North
+mahalanobis(clay1to7_north[,3:9], colMeans(clay1to7_north[,3:9]), cov(clay1to7_north[,3:9]))
+
+# With 7 predictor variables (PCs 1-7), the critical chi-square value is 24.32
+# Given that the highest MD value among the northerly clays is 20.92, it doesn't
+# look like there are any outliers
+
+# Have to pair down the number of predictors to 5 for the South, since there are only 7 
+# samples. The critical chi-square value is 20.52 for that many, looking good for the south.
+mahalanobis(clay1to7_south[,3:7], colMeans(clay1to7_south[,3:7]), cov(clay1to7_south[,3:7]))
+
+# Let's now look at group membership probabilities. This function written by Matt Peeples allows for 
+# for calculating group membership probabilities by chemical compositional distance using 
+# Mahalanobis distances and Hotellings T^2 statistic
+group.mem.probs <- function(x2.l,attr1.grp,grps) {
+  
+  # x2.l = transformed element data
+  # attr1 = group designation by sample
+  # grps <- vector of groups to evaluate
+  
+  probs <- list()
+  for (m in 1:length(grps)) {
+    x <- x2.l[which(attr1.grp==grps[m]),]
+    probs[[m]] <- matrix(0,nrow(x),length(grps))
+    colnames(probs[[m]]) <- grps
+    rownames(probs[[m]]) <- rownames(x)
+    
+    grps2 <- grps[-m]
+    
+    p.val <- NULL
+    for (i in 1:nrow(x)) {p.val[i] <- HotellingsT2(x[i,],x[-i,])$p.value}
+    probs[[m]][,m] <- round(p.val,5)*100
+    
+    for (j in 1:length(grps2)) {
+      p.val2 <- NULL
+      for (i in 1:nrow(x)) {p.val2[i] <- HotellingsT2(x[i,],x2.l[which(attr1.grp==grps2[j]),])$p.value}
+      probs[[m]][,which(grps==grps2[j])] <- round(p.val2,5)*100}}
+  return(probs)
+}
+
+# But how do the samples compare to each other on the first 5 PCs (85% ov observed variability)?
+group.mem.probs(clay_pc1to7[3:5], clay_pc1to7$Geography_2, unique(clay_pc1to7$Geography_2)) 
+
+# How about using Li, Be, V, Ni, and Cs - elements that show good separation between the groups?
+group.mem.probs(clay_pcaready[, c("Ni", "Cs")], clay_pc1to7$Geography_2, unique(clay_pc1to7$Geography_2)) 
+
+# In both cases, there is a marked lack of clear group separation in statistical space for samples in both groups. That is, 
+# there are samples defined as North that have a higher probability of grouping with the Southerly sherds and vice versa. 
+# To a certain degree, this is expected - this is an experimental analysis looking within a single river valley, and 
+# indeed there is not statistically significant separation between the groups as a result. 
+# Nevertheless, it is instructive that chemical differences do appear as one moves from the northeast to the southwest in 
+# the CIRV, conforming to geologic patterns of exposing parent material of older ages. As a result, an argument can be made
+# that pottery would likely follow this patterning based on raw material availability. 
