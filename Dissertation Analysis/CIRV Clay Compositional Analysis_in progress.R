@@ -376,13 +376,16 @@ group.mem.probs <- function(x2.l,attr1.grp,grps) {
 # But how do the samples compare to each other on the first 5 PCs (85% ov observed variability)?
 group.mem.probs(clay_pc1to7[3:5], clay_pc1to7$Geography_2, unique(clay_pc1to7$Geography_2)) 
 
-# How about using Li, Be, V, Ni, and Cs - elements that show good separation between the groups?
+# How about using some elements that show good separation between the groups?
 group.mem.probs(clay_pcaready[, c("Ni", "Cs")], clay_pc1to7$Geography_2, unique(clay_pc1to7$Geography_2)) 
 
-# In both cases, there is a marked lack of clear group separation in statistical space for samples in both groups. That is, 
-# there are samples defined as North that have a higher probability of grouping with the Southerly sherds and vice versa. 
-# To a certain degree, this is expected - this is an experimental analysis looking within a single river valley, and 
-# indeed there is not statistically significant separation between the groups as a result. 
-# Nevertheless, it is instructive that chemical differences do appear as one moves from the northeast to the southwest in 
-# the CIRV, conforming to geologic patterns of exposing parent material of older ages. As a result, an argument can be made
-# that pottery would likely follow this patterning based on raw material availability. 
+# In both cases, there is a marked lack of clear group separation in statistical space for 
+# samples in both groups. That is, there are samples defined as North that have a higher 
+# probability of grouping with the Southerly sherds and vice versa. 
+# To a certain degree, this is expected - this is an experimental analysis looking within a 
+# single river valley, and indeed there is not statistically significant separation between 
+# the groups as a result. 
+# Nevertheless, it is instructive that chemical differences do appear as one moves from the 
+# northeast to the southwest in the CIRV, conforming to geologic patterns of exposing parent 
+# material of older ages. As a result, an argument can be made that pottery would likely 
+# follow this patterning based on raw material availability. 
