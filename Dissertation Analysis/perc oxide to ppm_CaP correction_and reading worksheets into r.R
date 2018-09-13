@@ -73,22 +73,22 @@ df[,3:ncol(df)] <- sapply(df[,3:ncol(df)], as.numeric)
 
 ##----------------------------Correction for Shell Tempering Here-------------------------##
 
-#In analysis, I need to correct the sherd samples for the presence of shell tempering.
-#Shell is composed almost entirely of calcium which is in the same row in the periodic table
-#as strontium and barium. 
+# In analysis, I need to correct the sherd samples for the presence of shell tempering.
+# Shell is composed almost entirely of calcium which is in the same row in the periodic table
+# as strontium and barium. 
 
-#First step is to drop the Ohio Red standard samples because they don't need correcting
+# First step is to drop the Ohio Red standard samples because they don't need correcting
 orows <- str_detect(tolower(df$Sample), "red")
 df_samples1 <- df[!orows, ]
 
-#Add up all elements calculated in percent oxide aside from Ca and Ba
+# Add up all elements calculated in percent oxide aside from Ca and Ba
 CaP_correction <- df_samples1 %>% 
                     select(SiO2, Na2O, MgO, Al2O3, K2O, Sb2O5, 
                            MnO, Fe2O3, CuO, SnO2, Ti, PbO2, BaO, Bi, ZnO) %>% 
                     rowSums() %>%
                     tbl_df()
 
-#Correct the elements by dividing their amount by the corrected percent oxide
+# Correct the elements by dividing their amount by the corrected percent oxide
 df_samples1[, c(3:length(df_samples1))] <- sapply(df_samples1[, c(3:length(df_samples1))], 
                                  function(x){x/CaP_correction}) %>%
                             bind_cols()
