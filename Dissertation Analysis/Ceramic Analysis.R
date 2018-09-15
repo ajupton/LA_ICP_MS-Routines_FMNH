@@ -7,6 +7,7 @@ library(stringr)
 library(plotly)
 library(rebus)
 library(xlsx)
+library(readxl)
 
 samps <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
 
@@ -29,7 +30,8 @@ clay_samps$Sample <- str_replace(clay_samps$Sample, pattern = "_1" %R% END, "")
 
 # Add clay i.d.'s to a separate column
 clay_samps <- clay_samps %>%
-                mutate(id = parse_number(clay$Sample)) 
+                mutate(id = parse_number(clay$Sample)) %>%
+                arrange(Sample)
 
 ###_______________ Add features to ceramic samples ________________________###
 # Extract sample unique sherd i.d. number 
@@ -71,13 +73,116 @@ samples %>%
 # Looks like there are some significant at a 0.05 alpha, but there is a significant
 # amount of heteroscedasticity and residual variation in all but Sr, which
 # expectedly does highly correlate with Ca
-summary(lm(Ca ~ ., data = samples[,3:length(samples)]))
+summary(lm(Ni ~ ., data = samples[,3:length(samples)]))
 
 # Plotting to show how strong the linear relationships are for some elements
-p <- ggplot(samples, aes(x = Sr, y = CaO)) + geom_smooth() + geom_point()
+p <- ggplot(samples, aes(x = Sr, y = Ca)) + geom_smooth() + geom_point()
 #ggplotly(p)
 
+# Remove problem elements. Some elements are known to be unreliably measured using the ICP-MS
+# at the EAF. Following Golitko (2010), these include the following elements. 
+problem_elements <- c("P", "Sr", "Ba", "Ca", "Hf", "As", "Cl")
 
+# Other elements such as Ca and Sr are affected by shell tempering. Want to drop those as well. 
+
+# Overall these are the Elements retained - 44 in all.
+elems_retained <- c("Al","B", "Be", "Ce", "Co", "Cr", "Cs", "Dy", "Er", "Eu", "FeO",
+                    "Gd", "Ho", "In", "K", "La", "Li", "Lu", "Mg", "MnO", "Mo", "Na", "Nb", 
+                    "Nd", "Ni", "Pb", "Pr", "Rb", "Sc", "Si", "Sm", "Sn", "Ta", "Tb", "Th", "Ti",
+                    "Tm", "U", "V", "W", "Y", "Yb", "Zn", "Zr")
+
+ceramic.names.use <- names(samples)[(names(samples) %in% elems_retained)]
+#length(ceramic.names.use) == length(elems_retained) # check that all elements are retained 
+samples_good <- samples %>% select(ceramic.names.use)
+
+# Check to ensure the elements were removed are supposed to be removed
+anti_join(data.frame(names(samples)), 
+          data.frame(names(samples_good)), by = c("names.samples." = "names.samples_good."))
+
+# Need to drop the "O" for oxide after elements measured as %oxide composition since they have 
+# already been converted to ppm
+names(samples_good) <- str_remove(names(samples_good), "O")
+
+# Bind sample id and other data to the logged chemical concentrations 
+sample_pcaready <- bind_cols(samples[,c(1:2, 71:80)], samples_good)
+
+# Some ceramic samples were run on an older ICP-MS machine during an initial pilot study. 
+# I need to tease these out pending quality control from Laure Dussubieux, a chemist at the 
+# Field Museum. 
+sample_old_machine <- sample_pcaready %>% filter(Date < 2016)
+sample_new_pcaready <- sample_pcaready %>% filter(Date > 2016)
+
+########___________End of data cleaning, beginnging of statistical analysis__________########
+
+# First step is to take the log base 10 of all samples to account for scalar differences
+# in the magnitude of chemical compositions across the elements, from major to minor to trace
+sample_new_pcaready[,13:56] <- log10(sample_new_pcaready[,13:56])
+
+# Exploring PCA
+sample_pca <- sample_new_pcaready %>% 
+                nest() %>% 
+                mutate(pca = map(data, ~ prcomp(.x %>% select(Si:Th))),
+                       pca_aug = map2(pca, data, ~augment(.x, data = .y)))
+
+# Check variance explained by each model
+var_exp_sample <- sample_pca %>% 
+  unnest(pca_aug) %>% 
+  summarize_at(.vars = vars(contains("PC")), .funs = funs(var)) %>% 
+  gather(key = pc, value = variance) %>% 
+  mutate(var_exp = variance/sum(variance),
+         cum_var_exp = cumsum(var_exp),
+         pc = str_replace(pc, ".fitted", ""))
+
+# Looks like we need to retain the first 12 PC's to hit 90% of the data's variability
+# Graphing this out might help
+var_exp_sample %>% 
+  rename(`Variance Explained` = var_exp,
+         `Cumulative Variance Explained` = cum_var_exp) %>% 
+  gather(key = key, value = value, 
+         `Variance Explained`:`Cumulative Variance Explained`) %>% 
+  mutate(pc = str_replace(pc, "PC", "")) %>%
+  mutate(pc = as.numeric(pc)) %>%
+  ggplot(aes(reorder(pc, sort(as.numeric(as.character(pc)))), value, group = key)) + 
+  geom_point() + 
+  geom_line() + 
+  facet_wrap(~key, scales = "free_y") +
+  theme_bw() +
+  lims(y = c(0, 1)) +
+  labs(y = "Variance", x = "",
+       title = "Variance explained by each principal component")
+
+# Plot the first two PCs with Geography_2 as group separation
+sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = FALSE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Geography_2", 
+                 shape = "Geography_2",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+# This shows significant overlap but a general trend that follows the clay: in general there is
+# less elemental enrichment in clay resources in the southern portion of the CIRV
 
 
 
