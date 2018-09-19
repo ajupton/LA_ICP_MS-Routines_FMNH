@@ -8,6 +8,8 @@ library(plotly)
 library(rebus)
 library(xlsx)
 library(readxl)
+library(plotly)
+library(ggpubr)
 
 samps <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
 
@@ -184,5 +186,48 @@ sample_pca %>%
 # This shows significant overlap but a general trend that follows the clay: in general there is
 # less elemental enrichment in clay resources in the southern portion of the CIRV
 
+# Check the first two PCs with Sites as group separation
+site_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Geography_2", 
+                 shape = "Geography_2",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
 
+# Interact with the chart above
+#ggplotly(site_pc1pc2[[1]]) # plotly drops the stat_ellipse frames for some reason
+
+# Based on the initial inspection of PCs 1 and 2, it looks like three elements in particular 
+# are driving some of the group separation (subtle as it is): Mo, Mn, and Si
+# Let's plot those three elements in a 3D scatter plot
+Mo_Mn_Si <- plot_ly(sample_new_pcaready, x = ~Mo, y = ~Mn, z = ~Si, color = ~Geography_2)
+
+# Explore Samples by date
+ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) + 
+  stat_ellipse(aes(color = Geography_2)) + geom_text(aes(label = Date), size = 2))
+
+
+####_________________Beging Mahalanobis distance and membership assignments________________###
 
