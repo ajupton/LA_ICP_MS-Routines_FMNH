@@ -231,3 +231,33 @@ ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) +
 
 ####_________________Beging Mahalanobis distance and membership assignments________________###
 
+# Let's now look at group membership probabilities. This function written by Matt Peeples allows for 
+# for calculating group membership probabilities by chemical compositional distance using 
+# Mahalanobis distances and Hotellings T^2 statistic
+group.mem.probs <- function(x2.l,attr1.grp,grps) {
+  
+  # x2.l = transformed element data
+  # attr1 = group designation by sample
+  # grps <- vector of groups to evaluate
+  
+  probs <- list()
+ for (m in 1:length(grps)) {
+    x <- x2.l[which(attr1.grp == grps[m]),]
+    probs[[m]] <- matrix(0,nrow(x),length(grps))
+    colnames(probs[[m]]) <- grps
+    rownames(probs[[m]]) <- rownames(x)
+    
+    grps2 <- grps[-m]
+    
+    p.val <- NULL
+    for (i in 1:nrow(x)) {p.val[i] <- HotellingsT2(x[i,], x[-i,])$p.value}
+    probs[[m]][,m] <- round(p.val,5)*100
+    
+    for (j in 1:length(grps2)) {
+      p.val2 <- NULL
+      for (i in 1:nrow(x)) {p.val2[i] <- HotellingsT2(x[i,],x2.l[which(attr1.grp == grps2[j]),])$p.value}
+      probs[[m]][,which(grps == grps2[j])] <- round(p.val2, 5)*100}}
+  return(probs)
+}
+
+

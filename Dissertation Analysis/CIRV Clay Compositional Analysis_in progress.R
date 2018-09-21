@@ -11,6 +11,7 @@ library(knitr)
 library(ggfortify)
 library(stats)
 library(ICSNP)
+library(factoextra)
 
 # Read in full dataset
 all_samples <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
@@ -389,3 +390,8 @@ group.mem.probs(clay_pcaready[, c("Ni", "Cs")], clay_pc1to7$Geography_2, unique(
 # northeast to the southwest in the CIRV, conforming to geologic patterns of exposing parent 
 # material of older ages. As a result, an argument can be made that pottery would likely 
 # follow this patterning based on raw material availability. 
+
+
+
+# Optimal number of clusters based on the elbow method using the total within sum of squares
+fviz_nbclust(clay_pc1to7[3:9], kmeans, method = "wss")
