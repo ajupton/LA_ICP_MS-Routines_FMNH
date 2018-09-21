@@ -305,12 +305,13 @@ clay_pcaready %>%
 
 write_csv(clay_group_ave_std, "Clay group averages and stds.csv")
 
-# Caught a high outlier (based on std) in zircon, let's take a look here
+# Almost every element is enriched in northerly clays and as a result depleted in the 
+# southerly clays, taking a look at that via a histogram is instructive
 clay_pcaready %>%
   select(Geography_2, Si:Th) %>%
   gather(Element, Si:Th, -Geography_2) %>%
   mutate(`Si:Th` = 10^`Si:Th`) %>% 
-  filter(Element == "Zr") %>%
+  filter(Element == "Sn") %>%
   ggplot(aes(x = Element, group = Geography_2, y = `Si:Th`)) + geom_boxplot()
   
 # It looks like there is a good deal of separation in the geochemistry of clays between the 
