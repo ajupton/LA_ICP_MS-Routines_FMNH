@@ -289,12 +289,36 @@ ggplot(data = clay_pcaready, aes(x = Ni, y = Cs, color = Geography_2, shape = Ge
   scale_fill_manual(values = c("black","black")) + 
   scale_color_manual(values = c("black","black","black")) 
 
+# A table of average element concentrations and standard deviations between the two 
+# groups may be instructive of their differences numerically as opposed to visually
+clay_group_ave_std <- clay_pcaready %>%
+                        select(Geography_2, Si:Th) %>%
+                        gather(Element, Si:Th, -Geography_2) %>%
+                        mutate(`Si:Th` = 10^`Si:Th`) %>% # convert from log 10
+                        group_by(Geography_2, Element) %>%
+                        summarize(mean = mean(`Si:Th`, na.rm = TRUE), std = sd(`Si:Th`, na.rm = TRUE))
+
+# Count number of clay in the different groups
+clay_pcaready %>%
+  group_by(Geography_2) %>%
+  summarize(count = n())
+
+write_csv(clay_group_ave_std, "Clay group averages and stds.csv")
+
+# Caught a high outlier (based on std) in zircon, let's take a look here
+clay_pcaready %>%
+  select(Geography_2, Si:Th) %>%
+  gather(Element, Si:Th, -Geography_2) %>%
+  mutate(`Si:Th` = 10^`Si:Th`) %>% 
+  filter(Element == "Zr") %>%
+  ggplot(aes(x = Element, group = Geography_2, y = `Si:Th`)) + geom_boxplot()
+  
 # It looks like there is a good deal of separation in the geochemistry of clays between the 
 # Northern portion of the central Illinois River Valley (including the Spoon/Illinois confluence) 
 # and the Southern portion of the CIRV, south of the Spoon River
 # But let's check to see if statistical techniques come to a similar conclusion
 
-###__________________________HCA__________________________________________________________###
+###____________________________________HCA________________________________________________###
 # First, we create a data frame for distance calculations including the elemental data only
 clay_for_dist <- claylog_good
 rownames(clay_for_dist) <- claylog$Sample
@@ -390,7 +414,6 @@ group.mem.probs(clay_pcaready[, c("Ni", "Cs")], clay_pc1to7$Geography_2, unique(
 # northeast to the southwest in the CIRV, conforming to geologic patterns of exposing parent 
 # material of older ages. As a result, an argument can be made that pottery would likely 
 # follow this patterning based on raw material availability. 
-
 
 
 # Optimal number of clusters based on the elbow method using the total within sum of squares
