@@ -458,6 +458,9 @@ ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) +
 
 ###____________________________________Cluster Analysis_____________________________________###
 
+#####################################
+### Hierarchical Cluster Analysis ###
+#####################################
 # Now that I have a sense of the structure of the ceramic data set based on PCA, the next step
 # in compositional analysis is to see how the groups defined from prior information compare
 # to groups constructed using statistical clustering methods such as HCA, kmeans, and kmediods
@@ -511,6 +514,100 @@ sample_new_stat_clusters <- sample_new_pcaready %>%
 
 # Visualize the clusters from HCA using Ward's linkage
 fviz_cluster(list(data = sample_new_distready, cluster = ward_dist_groups))
+
+# Complete linkage also has a high agglomerative coefficient, let's model it
+completehc1 <- hclust(euc_dist_ceramics, method = "complete")
+completehc1_dend <- as.dendrogram(completehc1)
+
+# Plot Complete linkage dendrogram cut at 2.4, which results in 6 clusters (3 main and 3 minor)
+completehc1_dend_2.4 <- color_branches(completehc1_dend, h = 2.4)
+plot(completehc1_dend_2.4, cex.axis = 0.75, cex.lab = 0.75, nodePar = list(lab.cex = 0.15, pch = NA))
+complete_dist_groups <- cutree(completehc1_dend, h = 2.4)
+table(complete_dist_groups)
+sample_new_stat_clusters <- sample_new_stat_clusters %>%
+                              mutate(Complete_HCA_Cluster = complete_dist_groups)
+
+# Visualize the clusters from HCA using Complete linkage
+fviz_cluster(list(data = sample_new_distready, cluster = complete_dist_groups))
+
+# Let's compare the Ward's and Complete Linkage dendrograms with a tanglegram 
+# (this is very resource intensive, so I'm commenting it out)
+# tanglegram(wardhc1_dend, completehc1_dend)
+
+# Now let's see how these HCA groups correspond to other clustering methods 
+
+################################
+### K-means Cluster Analysis ###
+################################
+
+# First, it's a good idea to use a few methods to assess the number of clusters to model
+# Elbow Method
+fviz_nbclust(sample_new_distready, kmeans, method = "wss") # 3 - 8 optimal clusters; 3-4 looks good
+# Silhouette Method
+fviz_nbclust(sample_new_distready, kmeans, method = "silhouette") # 3 optimal clusters
+# Gap Stat
+fviz_nbclust(sample_new_distready, kmeans, method = "gap_stat") # 1 optimal cluster
+
+# Based on the optimal cluster methods, it looks like we should run kmeans twice, once with 
+# 3 clusters and once with 4 clusters
+
+# 3 Cluster K-means
+k3 <- kmeans(sample_new_distready, 
+             centers = 3, # number of clusters
+             nstart = 50, # number of random initial configurations out of which the best one is chosen
+             iter.max = 500) # number of allowable iterations allowed 
+
+# Visualize 3 cluster kmeans 
+fviz_cluster(k3, data = sample_new_distready)
+
+# Assign to clustering assignments data frame
+sample_new_stat_clusters <- sample_new_stat_clusters %>%
+                              mutate(Kmeans_3 = k3$cluster)
+
+
+# 4 Cluster K-means
+k4 <- kmeans(sample_new_distready, centers = 4, nstart = 50, iter.max = 500)
+
+# Visualize 4 cluster kmeans
+fviz_cluster(k4, data = sample_new_distready)
+
+# Assign to clustering assignments data frame
+sample_new_stat_clusters <- sample_new_stat_clusters %>%
+                              mutate(Kmeans_4 = k4$cluster)
+
+
+##################################
+### K-mediods Cluster Analysis ###
+##################################
+
+# For k-mediods, we'll be using the pam function from the cluster package. pam stands for 
+# "partitioning acount mediods"
+
+# As with k-means, it's a good idea to use a few methods to assess the number of clusters to model
+# Elbow Method
+fviz_nbclust(sample_new_distready, pam, method = "wss") # 5 looks optimal here
+# Silhouette Method
+fviz_nbclust(sample_new_distready, pam, method = "silhouette") # 2 optimal clusters
+# Gap Stat
+fviz_nbclust(sample_new_distready, pam, method = "gap_stat") # 1 optimal cluster
+
+# We'll run two clusters - one with 2 and one with 5
+# 2 cluster K-mediods
+pam2 <- pam(sample_new_distready, 2)
+
+# Plot 2 cluster k-mediods
+fviz_cluster(pam2, data = sample_new_distready)
+
+# 5 cluster K-mediods
+pam5 <- pam(sample_new_distready, 5)
+
+# Plot 5 cluster k-mediods
+fviz_cluster(pam5, data = sample_new_distready)
+
+# Assign k-mediods results to clustering assignments data frame
+sample_new_stat_clusters <- sample_new_stat_clusters %>%
+                              mutate(Kmediods_2 = pam2$clustering, 
+                                     Kmediods_5 = pam5$clustering)
 
 
 
