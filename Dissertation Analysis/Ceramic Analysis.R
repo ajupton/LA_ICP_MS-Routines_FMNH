@@ -10,6 +10,9 @@ library(xlsx)
 library(readxl)
 library(plotly)
 library(ggpubr)
+library(cluster)
+library(dendextend)
+library(factoextra)
 
 samps <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
 
@@ -75,7 +78,7 @@ samples %>%
 # Looks like there are some significant at a 0.05 alpha, but there is a significant
 # amount of heteroscedasticity and residual variation in all but Sr, which
 # expectedly does highly correlate with Ca
-summary(lm(Ni ~ ., data = samples[,3:length(samples)]))
+summary(lm(Ca ~ ., data = samples[,3:length(samples)]))
 
 # Plotting to show how strong the linear relationships are for some elements
 p <- ggplot(samples, aes(x = Sr, y = Ca)) + geom_smooth() + geom_point()
@@ -153,38 +156,46 @@ var_exp_sample %>%
   labs(y = "Variance", x = "",
        title = "Variance explained by each principal component")
 
+# Check number of PCs to retain to reach 90% of the variability in the original dataset
+var_exp_sample %>% filter(cum_var_exp < 0.909) # Need to retain the first 12 PCs. 12 PCs is much less than 44 elements
+
 # Plot the first two PCs with Geography_2 as group separation
-sample_pca %>%
-  mutate(
-    pca_graph = map2(
-      .x = pca,
-      .y = data,
-      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
-                 #loadings.label.repel = TRUE,
-                 loadings.label.colour = "black",
-                 loadings.colour = "gray85",
-                 loadings.label.alpha = 0.5,
-                 loadings.label.size = 3,
-                 loadings.label.hjust = 1.1,
-                 frame = FALSE,
-                 frame.type = "norm",
-                 data = .y, 
-                 colour = "Geography_2", 
-                 shape = "Geography_2",
-                 frame.level = .9, 
-                 frame.alpha = 0.001, 
-                 size = 2) +
-        theme_bw() + 
-        #geom_text(label = .y$Sample) +
-        labs(x = "Principal Component 1",
-             y = "Principal Component 2",
-             title = "First two principal components of PCA on CIRV Ceramic dataset")
-    )
-  ) %>%
-  pull(pca_graph)
+geo2_pc1pc2 <-sample_pca %>%
+              mutate(
+                pca_graph = map2(
+                  .x = pca,
+                  .y = data,
+                  ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                             #loadings.label.repel = TRUE,
+                             loadings.label.colour = "black",
+                             loadings.colour = "gray85",
+                             loadings.label.alpha = 0.5,
+                             loadings.label.size = 3,
+                             loadings.label.hjust = 1.1,
+                             frame = FALSE,
+                             frame.type = "norm",
+                             data = .y, 
+                             colour = "Geography_2", 
+                             shape = "Geography_2",
+                             frame.level = .9, 
+                             frame.alpha = 0.001, 
+                             size = 2) +
+                    theme_bw() + 
+                    #geom_text(label = .y$Sample) +
+                    labs(x = "Principal Component 1",
+                         y = "Principal Component 2",
+                         title = "First two principal components of PCA on CIRV Ceramic dataset")
+                )
+              ) %>%
+              pull(pca_graph)
+
+
+geo2_pc1pc2[[1]]
 
 # This shows significant overlap but a general trend that follows the clay: in general there is
-# less elemental enrichment in clay resources in the southern portion of the CIRV
+# less elemental enrichment in clay resources in the southern portion of the CIRV compared to the northern part
+# with the north-south line of demarcation being the Spoon-Illinois River confluence (clay along the Spoon 
+# is included in the north)
 
 # Check the first two PCs with Sites as group separation
 site_pc1pc2 <- sample_pca %>%
@@ -202,7 +213,7 @@ site_pc1pc2 <- sample_pca %>%
                  frame = TRUE,
                  frame.type = "norm",
                  data = .y, 
-                 colour = "Geography_2", 
+                 colour = "Site", 
                  shape = "Geography_2",
                  frame.level = .9, 
                  frame.alpha = 0.001, 
@@ -217,7 +228,217 @@ site_pc1pc2 <- sample_pca %>%
   pull(pca_graph)
 
 # Interact with the chart above
-#ggplotly(site_pc1pc2[[1]]) # plotly drops the stat_ellipse frames for some reason
+ggplotly(site_pc1pc2[[1]]) # plotly drops the stat_ellipse frames for some reason
+# This is a challenge to interpret, but it doesn't seem as though there is meaningful patterning
+# when considering the different sites on PC1-PC2 aside from some outliers in Walsh/Crable. 
+
+# Check the first two PCs with Vessel Class as group separation
+vessel_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Vessel_Class", 
+                 shape = "Vessel_Class",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(vessel_pc1pc2[[1]])
+# The vessel graph is interesting. At first glance, it doesn't seem as though there is much in the way
+# of separation by vessel class, but there appears to be some nuances to that upon futher 
+# consideration. There are some plates that are low on both PC1 and PC2 axes as well as jars
+# that are significantly more enriched on PC1
+
+# How about separation by time?
+time_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Time", 
+                 shape = "Time",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(time_pc1pc2[[1]])
+# Again, this appears similar to the prior PC biplot separated by vessel class - there is
+# no general trend of group separation but some interesting insights when considering 
+# outliers. 
+
+# Perhaps Oneota presence may be more revealing
+oneota_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Oneota_Present", 
+                 shape = "Oneota_Present",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(oneota_pc1pc2[[1]])
+# I certainly can't see any meaningful trends here. This suggests that Oneota and Mississippian 
+# potters are almost undoubtedly using similar (or the same) clay. However, more work is needed
+# to confirm this hypothesis. 
+
+# Does temper percent matter?
+tempperc_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Temper_Perc", 
+                 shape = "Geography_2",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(tempperc_pc1pc2[[1]])
+# Can't really discern anything here
+
+# Does temper size matter?
+tempsize_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Temper_Size", 
+                 shape = "Geography_2",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(tempsize_pc1pc2[[1]])
+# Interestingly, it appears that the smallest temper size only appears in the northern part of the valley. 
+# That might suggest that there is either a preference for smaller temper grains there or it is a 
+# response to the clay available in the north. 
+
+# Finally, let's check Cultural Group
+culture_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 #loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray85",
+                 loadings.label.alpha = 0.5,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = 1.1,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Cultural_Group", 
+                 shape = "Cultural_Group",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2",
+             title = "First two principal components of PCA on CIRV Ceramic dataset")
+    )
+  ) %>%
+  pull(pca_graph)
+
+ggplotly(culture_pc1pc2[[1]])
+# Very little to no discernible patterning here. This again indicates that both cultural
+# groups are likely to be using the same clays. 
 
 # Based on the initial inspection of PCs 1 and 2, it looks like three elements in particular 
 # are driving some of the group separation (subtle as it is): Mo, Mn, and Si
@@ -227,6 +448,70 @@ Mo_Mn_Si <- plot_ly(sample_new_pcaready, x = ~Mo, y = ~Mn, z = ~Si, color = ~Geo
 # Explore Samples by date
 ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) + 
   stat_ellipse(aes(color = Geography_2)) + geom_text(aes(label = Date), size = 2))
+
+# All in all, only a general trend of the north-south distinction holds when considering prior information
+# on PC1-PC2 biplots. That distinction is marked by significant overlap. We'll consider that when
+# running group membership probabilities. But first, it's necessary to explore how a variety of 
+# statistical methods will group the data. We'll append that group information to our PC list such that
+# we can consider both prior information and statistical infomation in groups before moving on to 
+# group refinement. 
+
+###____________________________________Cluster Analysis_____________________________________###
+
+# Now that I have a sense of the structure of the ceramic data set based on PCA, the next step
+# in compositional analysis is to see how the groups defined from prior information compare
+# to groups constructed using statistical clustering methods such as HCA, kmeans, and kmediods
+
+# Let's start with some tree-based methods (aka Hierarchical cluster analysis or HCA)
+# We'll use agglomerative methods here (bottom up) as opposed to divisive methods (top down)
+
+# Prep the dataset
+# Set rownames to aid in interpretations of dendrograms and other plots
+rownames(sample_new_pcaready) <- sample_new_pcaready$Sample
+
+# Drop the prior known information features
+sample_new_distready <- sample_new_pcaready %>% select(c(-1:-12))
+
+# First make a dissimilarity matrix based on Euclidean distance
+euc_dist_ceramics <- dist(sample_new_distready, method = "euclidean")
+
+# We can check agglomerative coefficients with agnes to see which method(s) might
+# work best with the ceramic compositional dataset
+clustmethods <- c( "average", "single", "complete", "ward")
+names(clustmethods) <- c( "average", "single", "complete", "ward")
+
+# function to compute agglomerative coefficient
+ac <- function(x) {
+  agnes(euc_dist_ceramics, method = x)$ac
+}
+
+map_dbl(clustmethods, ac)
+
+# Looks like complete and Ward linkage methods will work best. We'll run those
+
+# Hierarchical clustering using Ward's Linkage
+wardhc1 <- hclust(euc_dist_ceramics, method = "ward.D")
+wardhc1_dend <- as.dendrogram(wardhc1) # create dendrogram object
+
+# Plot Ward dendrogram
+plot(wardhc1_dend, nodePar = list(lab.cex = 0.15, pch = NA))
+# Looks like there are three well defined clusters at a height of 20. 
+# We can color the dendrogram at that height
+wardhc1_dend_20 <- color_branches(wardhc1_dend, h = 20)
+plot(wardhc1_dend_20, cex.axis = 0.75, cex.lab = 0.75, nodePar = list(lab.cex = 0.15, pch = NA))
+
+# This looks like a good hypothetical groupings to add to our original dataset
+# We'll add all statistical clusters to a dataset sample_new_stat_clusters
+ward_dist_groups <- cutree(wardhc1_dend_20, h = 20)
+table(ward_dist_groups) # How many samples are in each cluster>?
+
+sample_new_stat_clusters <- sample_new_pcaready %>%
+                              select(Sample) %>%
+                              mutate(Ward_HCA_Cluster = ward_dist_groups)
+
+# Visualize the clusters from HCA using Ward's linkage
+fviz_cluster(list(data = sample_new_distready, cluster = ward_dist_groups))
+
 
 
 ####_________________Beging Mahalanobis distance and membership assignments________________###

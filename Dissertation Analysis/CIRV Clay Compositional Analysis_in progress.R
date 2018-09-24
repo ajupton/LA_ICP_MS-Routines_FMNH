@@ -12,6 +12,7 @@ library(ggfortify)
 library(stats)
 library(ICSNP)
 library(factoextra)
+library(dendextend)
 
 # Read in full dataset
 all_samples <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
@@ -417,5 +418,20 @@ group.mem.probs(clay_pcaready[, c("Ni", "Cs")], clay_pc1to7$Geography_2, unique(
 # follow this patterning based on raw material availability. 
 
 
+## Exploratory cluster analysis
+
 # Optimal number of clusters based on the elbow method using the total within sum of squares
 fviz_nbclust(clay_pc1to7[3:9], kmeans, method = "wss")
+
+clay_dist <- hclust(dist(clay_pc1to7[3:9]))
+
+View(clay_pc1to7)
+
+# Create dendrogram object
+clay_dend_df_com <- as.dendrogram(clay_dist)
+
+# Plot dendogram object to look for good cut-off heights - 2.5 seems to be a good height
+plot(clay_dend_df_com, nodePar = list(lab.cex = 0.15, pch = NA))
+
+dend_2.5 <- color_branches(clay_dend_df_com, h = 1.950)
+plot(dend_2.5, cex.axis = 0.75, cex.lab = 0.75, nodePar = list(lab.cex = .85, pch = NA))
