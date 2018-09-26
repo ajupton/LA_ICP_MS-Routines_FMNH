@@ -13,6 +13,8 @@ library(ggpubr)
 library(cluster)
 library(dendextend)
 library(factoextra)
+library(stats)
+library(ICSNP)
 
 samps <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
 
@@ -641,5 +643,40 @@ group.mem.probs <- function(x2.l,attr1.grp,grps) {
       probs[[m]][,which(grps == grps2[j])] <- round(p.val2, 5)*100}}
   return(probs)
 }
+
+
+# Calculate group membership probabilities for the HCA Ward group assignments
+ward_group_mem <- group.mem.probs(sample_new_pcaready[13:56], sample_new_stat_clusters$Ward_HCA_Cluster, 
+                    unique(sample_new_stat_clusters$Ward_HCA_Cluster)) 
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+ward_group_mem <- map(ward_group_mem, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Ward HCA
+ward_group_mem <- ward_group_mem %>% 
+                    bind_cols(sample_new_stat_clusters[, c(1:2)]) 
+  
+# Convert to data frame
+ward_group_mem <- as.data.frame(ward_group_mem)
+
+# New column of membership probability for initially assigned group
+ward_group_mem$assigned_val <- ward_group_mem[1:3][cbind(seq_len(nrow(ward_group_mem)), 
+                                                         ward_group_mem$Ward_HCA_Cluster)]
+ 
+# Make new membership assignments
+ward_group_mem %>%
+  mutate(assign_iter1 = ifelse(
+    assigned_val > 2.5, Ward_HCA_Cluster, 0
+  ))
+
+# Percent unassigned sherds where the original assignment is the most likely and above 2.5%
+ward_group_mem %>%
+  mutate(new_1 = ifelse(.$assigned_val == .$`1`, 0, .$`1`)) %>%
+  mutate(new_2 = ifelse(.$assigned_val == .$`2`, 0, .$`2`)) %>%
+  mutate(new_3 = ifelse(.$assigned_val == .$`3`, 0, .$`3`)) %>%
+  mutate(assign_iter1 = ifelse(
+    assigned_val >= new_1 & assigned_val >= new_2 & assigned_val >= new_3 & 
+      assigned_val > 2.5, Ward_HCA_Cluster, 0)) %>%
+  summarize(perc_unassigned = sum(assign_iter1 == 0)/n())
 
 
