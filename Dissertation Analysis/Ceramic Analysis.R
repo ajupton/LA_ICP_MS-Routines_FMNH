@@ -612,12 +612,32 @@ sample_new_stat_clusters <- sample_new_stat_clusters %>%
                                      Kmediods_5 = pam5$clustering)
 
 
+# One last exploratory metric would be to take the most often occuring group assignment number, 
+# the mode
+# Little function to calculate the mode
+Mode <- function(x) {
+  ux <- unique(x)
+  ux[which.max(tabulate(match(x, ux)))]
+}
+
+# Apply this row-wise to the data
+mode_assignment <- apply(sample_new_stat_clusters, 1, Mode)
+
 
 ####_________________Beging Mahalanobis distance and membership assignments________________###
 
-# Let's now look at group membership probabilities. This function written by Matt Peeples allows for 
-# for calculating group membership probabilities by chemical compositional distance using 
-# Mahalanobis distances and Hotellings T^2 statistic
+# First, create a data frame of the first 12 PC's, which account for 90% of the variability in 
+# the elemental data set. This will allow group membership probability assessments with a
+# group as small as 14 (or perhaps 13)
+pc1to12 <- sample_pca[['pca_aug']][[1]] %>% 
+  select(.fittedPC1, .fittedPC2, .fittedPC3, .fittedPC4, .fittedPC5, .fittedPC6, .fittedPC7, 
+         .fittedPC8, .fittedPC9, .fittedPC10, .fittedPC11, .fittedPC12)
+
+# This function written by Matt Peeples allows for for calculating group membership probabilities
+# by chemical compositional distance using Mahalanobis distances and Hotellings T^2 statistic
+# This is identical to the procedure used in MURRAP GAUSS routines for the same purpose and has
+# been cross referenced against that routine to ensure accuracy for data presented in this 
+# analysis
 group.mem.probs <- function(x2.l,attr1.grp,grps) {
   
   # x2.l = transformed element data
@@ -644,39 +664,116 @@ group.mem.probs <- function(x2.l,attr1.grp,grps) {
   return(probs)
 }
 
-
-# Calculate group membership probabilities for the HCA Ward group assignments
-ward_group_mem <- group.mem.probs(sample_new_pcaready[13:56], sample_new_stat_clusters$Ward_HCA_Cluster, 
+########### WARD HCA #################
+# Calculate group membership probabilities for the HCA Ward group assignments based on PCA data
+ward_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Ward_HCA_Cluster, 
                     unique(sample_new_stat_clusters$Ward_HCA_Cluster)) 
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Create list of data that is grouped the same as the group probability list
+ward_samp_list <- split(sample_new_stat_clusters[, c(1:2)], 
+                        f = sample_new_stat_clusters$Ward_HCA_Cluster)
+
+# Convert the list of matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 ward_group_mem <- map(ward_group_mem, as.data.frame) %>% bind_rows()
 
-# Bind to initial sample id and group assignment from Ward HCA
-ward_group_mem <- ward_group_mem %>% 
-                    bind_cols(sample_new_stat_clusters[, c(1:2)]) 
-  
-# Convert to data frame
-ward_group_mem <- as.data.frame(ward_group_mem)
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+ward_samp_df <- map(ward_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Ward HCA 
+# and convert to data frame for easier handling
+ward_group_mem <- as.data.frame(bind_cols(ward_group_mem, ward_samp_df))
 
 # New column of membership probability for initially assigned group
 ward_group_mem$assigned_val <- ward_group_mem[1:3][cbind(seq_len(nrow(ward_group_mem)), 
                                                          ward_group_mem$Ward_HCA_Cluster)]
- 
-# Make new membership assignments
-ward_group_mem %>%
-  mutate(assign_iter1 = ifelse(
-    assigned_val > 2.5, Ward_HCA_Cluster, 0
-  ))
 
-# Percent unassigned sherds where the original assignment is the most likely and above 2.5%
+# Set the initial roup assignment value to zero to allow for comparisons
+ward_group_mem[cbind(seq_len(nrow(ward_group_mem)), ward_group_mem$Ward_HCA_Cluster)] <- 0
+
+# The heuristic I am using to assess group membership asks whether or not the probability of
+# group membership in the original assigned cluster is greater than 10% and that the 
+# probability of membership in any other cluster is less that 10%. This follows 
+# Peeples (2010) in part and is a fairly conservative threshold. 
 ward_group_mem %>%
-  mutate(new_1 = ifelse(.$assigned_val == .$`1`, 0, .$`1`)) %>%
-  mutate(new_2 = ifelse(.$assigned_val == .$`2`, 0, .$`2`)) %>%
-  mutate(new_3 = ifelse(.$assigned_val == .$`3`, 0, .$`3`)) %>%
-  mutate(assign_iter1 = ifelse(
-    assigned_val >= new_1 & assigned_val >= new_2 & assigned_val >= new_3 & 
-      assigned_val > 2.5, Ward_HCA_Cluster, 0)) %>%
-  summarize(perc_unassigned = sum(assign_iter1 == 0)/n())
+ # mutate(out_group_sum = `1` + `2` + `3`) %>%
+  mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10 & `3` < 10), 
+                            Ward_HCA_Cluster, "unassigned")) %>% 
+#   filter(new_assign != "unassigned")  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# Applying the heuristic to the initial group assignments for the Ward HCA clusters results 
+# in an 77.16% unassignment rate. This is quite high. Let's check other methods to see how they fair. 
+
+
+########### Kmeans 4 #################
+# Group probabilities for the kmeans 4 cluster solution on transformed PCA data 
+kmean4_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmeans_4, 
+                                      unique(sample_new_stat_clusters$Kmeans_4)) 
+
+# Create list of data that is grouped the same as the group probability list
+kmean4_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmeans_4")], 
+                        f = sample_new_stat_clusters$Kmeans_4)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+kmean4_group_mem <- map(kmean4_group_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+kmean4_samp_df <- map(kmean4_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmean 4
+# and convert to data frame for easier handling
+kmean4_group_mem <- as.data.frame(bind_cols(kmean4_group_mem, kmean4_samp_df))
+
+# Convert to tibble data frame for easier handling
+kmean4_group_mem <- as.data.frame(kmean4_group_mem)
+
+# New column of membership probability for initially assigned group
+kmean4_group_mem$assigned_val <- kmean4_group_mem[1:4][cbind(seq_len(nrow(kmean4_group_mem)), 
+                                                           kmean4_group_mem$Kmeans_4)]
+
+# Set the initial roup assignment value to zero to allow for comparisons
+kmean4_group_mem[cbind(seq_len(nrow(kmean4_group_mem)), kmean4_group_mem$Kmeans_4)] <- 0
+
+# Assess membership probabilities using my heuristic
+kmean4_group_mem %>% 
+  mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10 & `3` < 10 & `4` < 10), 
+                             Kmeans_4, "unassigned")) %>% 
+  #   filter(new_assign != "unassigned")  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# At an 89.69%, it doesn't seem like kmeans 4 group clusters faired much better than Ward HCA
+
+
+########### Kmediods (pam) 5 #################
+# Group probabilities for the kmediods (pam) 5 cluster solution on PC's 1 to 12 (90% of variability)
+kmed5_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmediods_5, 
+                                    unique(sample_new_stat_clusters$Kmediods_5)) 
+
+# Create list of data that is grouped the same as the group probability list
+kmed5_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmediods_5")], 
+                          f = sample_new_stat_clusters$Kmediods_5)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+kmed5_group_mem <- map(kmed5_group_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+kmed5_samp_df <- map(kmed5_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+kmed5_group_mem <- as.data.frame(bind_cols(kmed5_group_mem, kmed5_samp_df))
+
+# New column of membership probability for initially assigned group
+kmed5_group_mem$assigned_val <- kmed5_group_mem[1:5][cbind(seq_len(nrow(kmed5_group_mem)), 
+                                                           kmed5_group_mem$Kmediods_5)]
+
+# Set the initial roup assignment value to zero to allow for comparisons
+kmed5_group_mem[cbind(seq_len(nrow(kmed5_group_mem)), kmed5_group_mem$Kmediods_5)] <- 0
+
+# Assess membership probabilities using my heuristic
+kmed5_group_mem %>% 
+  mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10 & `3` < 10 & `4` < 10 & `5` < 10), 
+                             Kmediods_5, "unassigned")) %>% 
+  #   filter(new_assign != "unassigned")  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
 
 
