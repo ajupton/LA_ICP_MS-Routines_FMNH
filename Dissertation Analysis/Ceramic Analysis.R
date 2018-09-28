@@ -775,5 +775,90 @@ kmed5_group_mem %>%
                              Kmediods_5, "unassigned")) %>% 
   #   filter(new_assign != "unassigned")  
   summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# Ouch, at 95.58% unassigned using the heuristic criteria, this doesn't hold up
 
+
+
+########### Kmediods (pam) 2 #################
+# Group probabilities for the kmediods (pam) 2 cluster solution on PC's 1 to 12 (90% of variability)
+kmed2_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmediods_2, 
+                                   unique(sample_new_stat_clusters$Kmediods_2)) 
+
+# Create list of data that is grouped the same as the group probability list
+kmed2_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmediods_2")], 
+                         f = sample_new_stat_clusters$Kmediods_2)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+kmed2_group_mem <- map(kmed2_group_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+kmed2_samp_df <- map(kmed2_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+kmed2_group_mem <- as.data.frame(bind_cols(kmed2_group_mem, kmed2_samp_df))
+
+# New column of membership probability for initially assigned group
+kmed2_group_mem$assigned_val <- kmed2_group_mem[1:2][cbind(seq_len(nrow(kmed2_group_mem)), 
+                                                           kmed2_group_mem$Kmediods_2)]
+
+# Set the initial roup assignment value to zero to allow for comparisons
+kmed2_group_mem[cbind(seq_len(nrow(kmed2_group_mem)), kmed2_group_mem$Kmediods_2)] <- 0
+
+# Assess membership probabilities using my heuristic
+kmed2_group_mem %>% 
+  mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 10 & `2` < 10), 
+                             Kmediods_2, "unassigned")) %>% 
+ # filter(assigned_val < `1` | assigned_val < `2`)  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# A 75.32% unassigned using the heuristic criteria is better, but still doesn't hold up
+
+
+
+
+
+########### Mahalanobis-first route  ############
+# Another common method used for constructing core chemical compositional groups in
+# archaeology is to initially treat the entire data set as one large group and iteratively
+# removing samples with a membership probability of less than 1%
+
+# Double the PC data so the group can be compared to itself
+pc1to12_twice <- bind_rows(pc1to12, pc1to12)
+
+# Double the stat cluster assignment data
+sample_new_stat_clusters_twice <- bind_rows(sample_new_stat_clusters, sample_new_stat_clusters)
+
+# Create vector of group assignments 
+one_two <- c(rep(1, 543), rep(2, 543))
+
+# Bind group assignments to cluster data
+sample_new_stat_clusters_twice <- cbind(sample_new_stat_clusters_twice, one_two)
+
+# Group probabilities for the group as one data set on PC's 1 through 12
+one_group_mem <- group.mem.probs(pc1to12_twice, sample_new_stat_clusters_twice$one_two, 
+                                    unique(sample_new_stat_clusters_twice$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list <- split(sample_new_stat_clusters_twice[, c("Sample", "one_two")], 
+                         f = sample_new_stat_clusters_twice$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem <- map(one_group_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df <- map(one_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+one_group_mem <- as.data.frame(bind_cols(one_group_mem, one_samp_df))
+
+# Create data frame of sample to retain after first iteraction
+iter1 <- one_group_mem %>%
+          filter(one_two == 1) %>%
+          filter(`1` > 1) %>%
+          select(Sample) 
+  
+# Subset initial groups
+one_group_mem1 <- one_group_mem %>%
+                    filter(Sample %in% iter1$Sample)
 
