@@ -857,8 +857,60 @@ iter1 <- one_group_mem %>%
           filter(one_two == 1) %>%
           filter(`1` > 1) %>%
           select(Sample) 
+
+# Create data frame of unassigned samples after first iteraction
+iter1_unassigned <- one_group_mem %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
   
 # Subset initial groups
 one_group_mem1 <- one_group_mem %>%
                     filter(Sample %in% iter1$Sample)
 
+
+### Iteration two 
+# Bind samples list to PCA data, filter out the unassigned samples after iteration one 
+# and select PC data only for group membership probability calculation
+pc1to12_twiice_iter2 <- bind_cols(sample_new_stat_clusters_twice[, c("Sample", "one_two")], 
+                                  pc1to12_twice) %>%
+                          filter(Sample %in% iter1$Sample) %>%
+                          select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 2                
+sample_new_stat_clusters_twice_iter2 <- sample_new_stat_clusters_twice[, c("Sample", "one_two")] %>%
+                                          filter(Sample %in% iter1$Sample)
+
+# Group probabilities for iteration 2 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_2 <- group.mem.probs(pc1to12_twiice_iter2, sample_new_stat_clusters_twice_iter2$one_two, 
+                                 unique(sample_new_stat_clusters_twice_iter2$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter2 <- split(sample_new_stat_clusters_twice_iter2, 
+                          f = sample_new_stat_clusters_twice_iter2$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter2 <- map(one_group_mem_iter_2, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter2 <- map(one_samp_list_iter2, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+one_group_mem_iter2 <- as.data.frame(bind_cols(one_group_mem_iter2, one_samp_df_iter2))
+
+# Create data frame of sample to retain after first iteraction
+iter2 <- one_group_mem_iter2 %>%
+            filter(one_two == 1) %>%
+            filter(`1` > 1) %>%
+            select(Sample) 
+
+# Create data frame of unassigned samples after first iteraction
+iter2_unassigned <- one_group_mem_iter2 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem2 <- one_group_mem_iter2 %>%
+                     filter(Sample %in% iter2$Sample)
