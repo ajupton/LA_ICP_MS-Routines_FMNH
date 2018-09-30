@@ -848,7 +848,7 @@ one_group_mem <- map(one_group_mem, as.data.frame) %>% bind_rows()
 # Convert the list of matrices of sample names to data frames and bind into one data frame
 one_samp_df <- map(one_samp_list, as.data.frame) %>% bind_rows()
 
-# Bind to initial sample id and group assignment from Kmed 5
+# Bind to initial sample id and group assignment from 
 # and convert to data frame for easier handling
 one_group_mem <- as.data.frame(bind_cols(one_group_mem, one_samp_df))
 
@@ -872,7 +872,7 @@ one_group_mem1 <- one_group_mem %>%
 ### Iteration two 
 # Bind samples list to PCA data, filter out the unassigned samples after iteration one 
 # and select PC data only for group membership probability calculation
-pc1to12_twiice_iter2 <- bind_cols(sample_new_stat_clusters_twice[, c("Sample", "one_two")], 
+pc1to12_twice_iter2 <- bind_cols(sample_new_stat_clusters_twice[, c("Sample", "one_two")], 
                                   pc1to12_twice) %>%
                           filter(Sample %in% iter1$Sample) %>%
                           select(-Sample, -one_two)
@@ -882,7 +882,7 @@ sample_new_stat_clusters_twice_iter2 <- sample_new_stat_clusters_twice[, c("Samp
                                           filter(Sample %in% iter1$Sample)
 
 # Group probabilities for iteration 2 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_2 <- group.mem.probs(pc1to12_twiice_iter2, sample_new_stat_clusters_twice_iter2$one_two, 
+one_group_mem_iter_2 <- group.mem.probs(pc1to12_twice_iter2, sample_new_stat_clusters_twice_iter2$one_two, 
                                  unique(sample_new_stat_clusters_twice_iter2$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
@@ -895,7 +895,7 @@ one_group_mem_iter2 <- map(one_group_mem_iter_2, as.data.frame) %>% bind_rows()
 # Convert the list of matrices of sample names to data frames and bind into one data frame
 one_samp_df_iter2 <- map(one_samp_list_iter2, as.data.frame) %>% bind_rows()
 
-# Bind to initial sample id and group assignment from Kmed 5
+# Bind to initial sample id and group assignment from 
 # and convert to data frame for easier handling
 one_group_mem_iter2 <- as.data.frame(bind_cols(one_group_mem_iter2, one_samp_df_iter2))
 
@@ -914,3 +914,357 @@ iter2_unassigned <- one_group_mem_iter2 %>%
 # Subset initial groups
 one_group_mem2 <- one_group_mem_iter2 %>%
                      filter(Sample %in% iter2$Sample)
+
+
+### Iteration 3
+# Bind samples list to PCA data, filter out the unassigned samples after iteration two 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter3 <- bind_cols(sample_new_stat_clusters_twice_iter2, 
+                                 pc1to12_twice_iter2) %>%
+                            filter(Sample %in% iter2$Sample) %>%
+                            select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 3               
+sample_new_stat_clusters_twice_iter3 <- sample_new_stat_clusters_twice_iter2 %>%
+                                            filter(Sample %in% iter2$Sample)
+
+# Group probabilities for iteration 3 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_3 <- group.mem.probs(pc1to12_twice_iter3, sample_new_stat_clusters_twice_iter3$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter3$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter3 <- split(sample_new_stat_clusters_twice_iter3, 
+                             f = sample_new_stat_clusters_twice_iter3$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter3 <- map(one_group_mem_iter_3, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter3 <- map(one_samp_list_iter3, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter3 <- as.data.frame(bind_cols(one_group_mem_iter3, one_samp_df_iter3))
+
+# Create data frame of sample to retain after third iteraction
+iter3 <- one_group_mem_iter3 %>%
+            filter(one_two == 1) %>%
+            filter(`1` > 1) %>%
+            select(Sample) 
+
+# Create data frame of unassigned samples after third iteraction
+iter3_unassigned <- one_group_mem_iter3 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem3 <- one_group_mem_iter3 %>%
+                    filter(Sample %in% iter3$Sample)
+
+### Iteration 4
+# Bind samples list to PCA data, filter out the unassigned samples after iteration three 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter4 <- bind_cols(sample_new_stat_clusters_twice_iter3, 
+                                 pc1to12_twice_iter3) %>%
+                          filter(Sample %in% iter3$Sample) %>%
+                          select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 4             
+sample_new_stat_clusters_twice_iter4 <- sample_new_stat_clusters_twice_iter3 %>%
+                                           filter(Sample %in% iter3$Sample)
+
+# Group probabilities for iteration 4 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_4 <- group.mem.probs(pc1to12_twice_iter4, sample_new_stat_clusters_twice_iter4$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter4$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter4 <- split(sample_new_stat_clusters_twice_iter4, 
+                             f = sample_new_stat_clusters_twice_iter4$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter4 <- map(one_group_mem_iter_4, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter4 <- map(one_samp_list_iter4, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter4 <- as.data.frame(bind_cols(one_group_mem_iter4, one_samp_df_iter4))
+
+# Create data frame of sample to retain after fourth iteraction
+iter4 <- one_group_mem_iter4 %>%
+            filter(one_two == 1) %>%
+            filter(`1` > 1) %>%
+            select(Sample) 
+
+# Create data frame of unassigned samples after fourth iteraction
+iter4_unassigned <- one_group_mem_iter4 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem4 <- one_group_mem_iter4 %>%
+                    filter(Sample %in% iter4$Sample)
+
+
+### Iteration 5
+# Bind samples list to PCA data, filter out the unassigned samples after iteration four 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter5 <- bind_cols(sample_new_stat_clusters_twice_iter4, 
+                                 pc1to12_twice_iter4) %>%
+                          filter(Sample %in% iter4$Sample) %>%
+                          select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 5             
+sample_new_stat_clusters_twice_iter5 <- sample_new_stat_clusters_twice_iter4 %>%
+                                           filter(Sample %in% iter4$Sample)
+
+# Group probabilities for iteration 5 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_5 <- group.mem.probs(pc1to12_twice_iter5, sample_new_stat_clusters_twice_iter5$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter5$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter5 <- split(sample_new_stat_clusters_twice_iter5, 
+                             f = sample_new_stat_clusters_twice_iter5$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter5 <- map(one_group_mem_iter_5, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter5 <- map(one_samp_list_iter5, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter5 <- as.data.frame(bind_cols(one_group_mem_iter5, one_samp_df_iter5))
+
+# Create data frame of sample to retain after fifth iteraction
+iter5 <- one_group_mem_iter5 %>%
+          filter(one_two == 1) %>%
+          filter(`1` > 1) %>%
+          select(Sample) 
+
+# Create data frame of unassigned samples after fifth iteraction
+iter5_unassigned <- one_group_mem_iter5 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem5 <- one_group_mem_iter5 %>%
+                    filter(Sample %in% iter5$Sample)
+
+### Iteration 6
+# Bind samples list to PCA data, filter out the unassigned samples after iteration five 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter6 <- bind_cols(sample_new_stat_clusters_twice_iter5, 
+                                 pc1to12_twice_iter5) %>%
+                                filter(Sample %in% iter5$Sample) %>%
+                                select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 6            
+sample_new_stat_clusters_twice_iter6 <- sample_new_stat_clusters_twice_iter5 %>%
+                                          filter(Sample %in% iter5$Sample)
+
+# Group probabilities for iteration 6 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_6 <- group.mem.probs(pc1to12_twice_iter6, sample_new_stat_clusters_twice_iter6$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter6$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter6 <- split(sample_new_stat_clusters_twice_iter6, 
+                             f = sample_new_stat_clusters_twice_iter6$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter6 <- map(one_group_mem_iter_6, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter6 <- map(one_samp_list_iter6, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter6 <- as.data.frame(bind_cols(one_group_mem_iter6, one_samp_df_iter6))
+
+# Create data frame of sample to retain after sixth iteraction
+iter6 <- one_group_mem_iter6 %>%
+            filter(one_two == 1) %>%
+            filter(`1` > 1) %>%
+            select(Sample) 
+
+# Create data frame of unassigned samples after sixth iteraction
+iter6_unassigned <- one_group_mem_iter6 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem6 <- one_group_mem_iter6 %>%
+                    filter(Sample %in% iter6$Sample)
+
+### Iteration 7
+# Bind samples list to PCA data, filter out the unassigned samples after iteration six 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter7 <- bind_cols(sample_new_stat_clusters_twice_iter6, 
+                                 pc1to12_twice_iter6) %>%
+                          filter(Sample %in% iter6$Sample) %>%
+                          select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 6            
+sample_new_stat_clusters_twice_iter7 <- sample_new_stat_clusters_twice_iter6 %>%
+                                          filter(Sample %in% iter6$Sample)
+
+# Group probabilities for iteration 7 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_7 <- group.mem.probs(pc1to12_twice_iter7, sample_new_stat_clusters_twice_iter7$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter7$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter7 <- split(sample_new_stat_clusters_twice_iter7, 
+                             f = sample_new_stat_clusters_twice_iter7$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter7 <- map(one_group_mem_iter_7, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter7 <- map(one_samp_list_iter7, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter7 <- as.data.frame(bind_cols(one_group_mem_iter7, one_samp_df_iter7))
+
+# Create data frame of sample to retain after seventh iteraction
+iter7 <- one_group_mem_iter7 %>%
+          filter(one_two == 1) %>%
+          filter(`1` > 1) %>%
+          select(Sample) 
+
+# Create data frame of unassigned samples after seventh iteraction
+iter7_unassigned <- one_group_mem_iter7 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem7 <- one_group_mem_iter7 %>%
+                     filter(Sample %in% iter7$Sample)
+
+### Iteration 8
+# Bind samples list to PCA data, filter out the unassigned samples after iteration seven 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter8 <- bind_cols(sample_new_stat_clusters_twice_iter7, 
+                                 pc1to12_twice_iter7) %>%
+                        filter(Sample %in% iter7$Sample) %>%
+                        select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 7           
+sample_new_stat_clusters_twice_iter8 <- sample_new_stat_clusters_twice_iter7 %>%
+                                           filter(Sample %in% iter7$Sample)
+
+# Group probabilities for iteration 8 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_8 <- group.mem.probs(pc1to12_twice_iter8, sample_new_stat_clusters_twice_iter8$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter8$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter8 <- split(sample_new_stat_clusters_twice_iter8, 
+                             f = sample_new_stat_clusters_twice_iter8$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter8 <- map(one_group_mem_iter_8, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter8 <- map(one_samp_list_iter8, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter8 <- as.data.frame(bind_cols(one_group_mem_iter8, one_samp_df_iter8))
+
+# Create data frame of sample to retain after fifth iteraction
+iter8 <- one_group_mem_iter8 %>%
+          filter(one_two == 1) %>%
+          filter(`1` > 1) %>%
+          select(Sample) 
+
+# Create data frame of unassigned samples after fifth iteraction
+iter8_unassigned <- one_group_mem_iter8 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem8 <- one_group_mem_iter8 %>%
+                     filter(Sample %in% iter8$Sample)
+
+
+### Iteration 9
+# Bind samples list to PCA data, filter out the unassigned samples after iteration eight 
+# and select PC data only for group membership probability calculation
+pc1to12_twice_iter9 <- bind_cols(sample_new_stat_clusters_twice_iter8, 
+                                 pc1to12_twice_iter8) %>%
+                          filter(Sample %in% iter8$Sample) %>%
+                          select(-Sample, -one_two)
+
+# Prep the sample names and assignments for iteration 8      
+sample_new_stat_clusters_twice_iter9 <- sample_new_stat_clusters_twice_iter8 %>%
+                                          filter(Sample %in% iter8$Sample)
+
+# Group probabilities for iteration 9 of the group as one data set on PC's 1 through 12
+one_group_mem_iter_9 <- group.mem.probs(pc1to12_twice_iter9, sample_new_stat_clusters_twice_iter9$one_two, 
+                                        unique(sample_new_stat_clusters_twice_iter9$one_two)) 
+
+# Create list of data that is grouped the same as the group probability list
+one_samp_list_iter9 <- split(sample_new_stat_clusters_twice_iter9, 
+                             f = sample_new_stat_clusters_twice_iter9$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+one_group_mem_iter9 <- map(one_group_mem_iter_9, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+one_samp_df_iter9 <- map(one_samp_list_iter9, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+one_group_mem_iter9 <- as.data.frame(bind_cols(one_group_mem_iter9, one_samp_df_iter9))
+
+# Create data frame of sample to retain after fifth iteraction
+iter9 <- one_group_mem_iter9 %>%
+            filter(one_two == 1) %>%
+            filter(`1` > 1) %>%
+            select(Sample) 
+
+# Create data frame of unassigned samples after fifth iteraction
+iter9_unassigned <- one_group_mem_iter9 %>%
+                      filter(one_two == 1) %>%
+                      filter(`1` < 1) %>%
+                      select(Sample) 
+
+# Subset initial groups
+one_group_mem9 <- one_group_mem_iter9 %>%
+                   filter(Sample %in% iter9$Sample)
+
+# Data frame of unassigned samples
+maha_unassigned <- bind_rows(iter1_unassigned, iter2_unassigned, iter3_unassigned, iter4_unassigned, 
+                      iter5_unassigned, iter6_unassigned, iter7_unassigned, iter8_unassigned) %>% 
+                      arrange(Sample) %>%
+                      mutate(one_two = 2)
+
+# Explore Samples by date
+ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) + 
+           stat_ellipse(aes(color = Geography_2)) + geom_text(aes(label = Date), size = 2))
+
+
+
+sample_new_stat_clusters_twice_iter9 %>%
+  filter(one_two == 1) %>%
+  bind_rows(maha_unassigned) %>%
+  left_join(sample_pca[['pca_aug']][[1]], by = "Sample") %>%
+  mutate(one_two = factor(one_two, labels = c("Core", "Unassigned"))) %>%
+ # ggplot(aes(x = .fittedPC1, y = .fittedPC3, color = one_two)) + geom_point() 
+  plot_ly(type = "scatter3d", x = ~.fittedPC1, y = ~.fittedPC2, z = ~.fittedPC3, color = ~as.factor(one_two),
+          text = ~(paste("Sample ID", Sample, '<br>Site:', Site, "<br>Geography_2:", 
+                         Geography_2, "<br>Time:", Time, "<br>Cultural Group:", Cultural_Group)),
+          marker = list(symbol = "circle"), size = 3,
+          mode = "markers") %>%
+  layout(scene = list(xaxis = list(title = 'Principal Component 1'),
+                      yaxis = list(title = 'Principal Component 2'),
+                      zaxis = list(title = 'Principal Component 3')))
+
+
