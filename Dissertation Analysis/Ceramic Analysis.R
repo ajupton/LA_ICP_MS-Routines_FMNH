@@ -815,9 +815,8 @@ kmed2_group_mem %>%
 
 
 
-
-
-########### Mahalanobis-first route  ############
+########### Mahalanobis-first route ##########################################################
+########### Core and Unassigned Group Assignments ############################################
 # Another common method used for constructing core chemical compositional groups in
 # archaeology is to initially treat the entire data set as one large group and iteratively
 # removing samples with a membership probability of less than 1%
@@ -1246,25 +1245,106 @@ maha_unassigned <- bind_rows(iter1_unassigned, iter2_unassigned, iter3_unassigne
                       arrange(Sample) %>%
                       mutate(one_two = 2)
 
-# Explore Samples by date
-ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) + 
-           stat_ellipse(aes(color = Geography_2)) + geom_text(aes(label = Date), size = 2))
+##################################################################################################
+# End of Core-Unassigned membership iterations
+##################################################################################################
 
+# Now that I have a core group and an unassigned group, it's important to assess whether or not
+# any of the unassigned samples might warrant inclusion back into the core group.
+# To do this, the unassigned samples will be projected against the core group as before. 
+# Defined PC loadings for core and unassigned samples
+pc1to12_core_unassigned <-  sample_new_stat_clusters_twice_iter9 %>%
+                              filter(one_two == 1) %>%
+                              bind_rows(maha_unassigned) %>%
+                              left_join(sample_pca[['pca_aug']][[1]], by = "Sample") %>% 
+                              select(.fittedPC1:.fittedPC12)
+          
+# Prep the sample names and assignments for core|unassigned evaluation 
+sample_core_unassigned_clusters <-  sample_new_stat_clusters_twice_iter9 %>%
+                                      filter(one_two == 1) %>%
+                                      bind_rows(maha_unassigned) 
 
+# Group probabilities for iteration 9 of the group as one data set on PC's 1 through 12
+core_unassigned_group_prob <- group.mem.probs(pc1to12_core_unassigned, 
+                                              sample_core_unassigned_clusters$one_two, 
+                                        unique(sample_core_unassigned_clusters$one_two)) 
 
+# Create list of data that is grouped the same as the group probability list
+core_unassigned_list <- split(sample_core_unassigned_clusters, 
+                             f = sample_core_unassigned_clusters$one_two)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+core_unassigned_group_prob <- map(core_unassigned_group_prob, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+core_unassigned_df <- map(core_unassigned_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+core_unassigned_group_prob <- as.data.frame(bind_cols(core_unassigned_group_prob, core_unassigned_df))
+
+# Check to see if there are any unassigned above the 1% threshold for membership in the core
+core_unassigned_group_prob %>%
+  filter(one_two == 2 & `1` > 1)
+# Does not appear to be the case
+
+# Check to see if there are any core samples below 1% threshold of being assigned to the core 
+core_unassigned_group_prob %>%
+  filter(one_two == 1 & `1` < 1)
+# Also does not appear to be the case. This confirms that we have statistically robust core and 
+# unassigned groups. 
+
+# Create interactive 3D scatter plot showing first three PC's and the core and unassigned samples      
+p <-  sample_new_stat_clusters_twice_iter9 %>%
+        filter(one_two == 1) %>%
+        bind_rows(maha_unassigned) %>%
+        left_join(sample_pca[['pca_aug']][[1]], by = "Sample") %>%
+        mutate(one_two = factor(one_two, labels = c("Core", "Unassigned"))) %>%
+        mutate(symbols1 = ifelse(one_two == "Core", "plus", "triangle-up")) %>%
+       # ggplot(aes(x = .fittedPC1, y = .fittedPC3, color = one_two)) + geom_point() 
+        plot_ly(type = "scatter3d", x = ~.fittedPC1, y = ~.fittedPC2, z = ~.fittedPC3, 
+                color = ~as.factor(one_two), size = 3, colors = c('grey40', 'black'), alpha = 0.8,
+                text = ~(paste("Sample ID", Sample, '<br>Site:', Site, "<br>Geography_2:", 
+                               Geography_2, "<br>Time:", Time, "<br>Cultural Group:", Cultural_Group)),
+             #  marker = list(symbol = ~I(symbols1)), size = .3,
+                symbol = ~one_two, #symbols = ~symbols1,
+              mode = "markers") %>%
+        layout(scene = list(xaxis = list(title = 'Principal Component 1'),
+                            yaxis = list(title = 'Principal Component 2'),
+                            zaxis = list(title = 'Principal Component 3')))
+
+# Adjust plot features
+pb <- plotly_build(p)
+pb$x$data[[1]]$marker$symbol <- 'diamond-open'
+pb$x$data[[2]]$marker$symbol <- 'circle-open'
+pb # Display interactive 3D scattergram
+
+# Table of core and unassigned group membership
 sample_new_stat_clusters_twice_iter9 %>%
   filter(one_two == 1) %>%
   bind_rows(maha_unassigned) %>%
   left_join(sample_pca[['pca_aug']][[1]], by = "Sample") %>%
   mutate(one_two = factor(one_two, labels = c("Core", "Unassigned"))) %>%
- # ggplot(aes(x = .fittedPC1, y = .fittedPC3, color = one_two)) + geom_point() 
-  plot_ly(type = "scatter3d", x = ~.fittedPC1, y = ~.fittedPC2, z = ~.fittedPC3, color = ~as.factor(one_two),
-          text = ~(paste("Sample ID", Sample, '<br>Site:', Site, "<br>Geography_2:", 
-                         Geography_2, "<br>Time:", Time, "<br>Cultural Group:", Cultural_Group)),
-          marker = list(symbol = "circle"), size = 3,
-          mode = "markers") %>%
-  layout(scene = list(xaxis = list(title = 'Principal Component 1'),
-                      yaxis = list(title = 'Principal Component 2'),
-                      zaxis = list(title = 'Principal Component 3')))
+  select(one_two) %>%
+  table()
+
+
+############################## Unassigned Group Structure #########################################
+# There are 127 unassigned samples (or 23.4% of the original ceramic sample)
+unassigned <- maha_unassigned %>%
+                left_join(sample_pca[['pca_aug']][[1]], by = "Sample") %>%
+                select(-starts_with(".")) # Drop PC's from full data set PCA
+
+# In taking a look at a table of the sites from where the outliers were recovered, it looks like
+# five sites in particular have outlier vessels: Crable, Morton Village, Orendorf C, Ten Mile Creek, 
+# and Walsh
+table(unassigned$Site)
+# Looking through the other pieces of a prior information, there don't appear to be any "smoking-gun"
+# trends that may help guide cluster analysis of the Unassigned group
+
+
+
+################################## Core Group Structure #############################################
+
 
 
