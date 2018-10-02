@@ -824,7 +824,6 @@ kmed2_group_mem %>%
 # A 75.32% unassigned using the heuristic criteria is better, but still doesn't hold up
 
 
-
 ########### Mahalanobis-first route ##########################################################
 ########### Core and Unassigned Group Assignments ############################################
 # Another common method used for constructing core chemical compositional groups in
@@ -851,7 +850,8 @@ one_group_mem <- group.mem.probs(pc1to12_twice, sample_new_stat_clusters_twice$o
 one_samp_list <- split(sample_new_stat_clusters_twice[, c("Sample", "one_two")], 
                          f = sample_new_stat_clusters_twice$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem <- map(one_group_mem, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -891,14 +891,16 @@ sample_new_stat_clusters_twice_iter2 <- sample_new_stat_clusters_twice[, c("Samp
                                           filter(Sample %in% iter1$Sample)
 
 # Group probabilities for iteration 2 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_2 <- group.mem.probs(pc1to12_twice_iter2, sample_new_stat_clusters_twice_iter2$one_two, 
+one_group_mem_iter_2 <- group.mem.probs(pc1to12_twice_iter2, 
+                                        sample_new_stat_clusters_twice_iter2$one_two, 
                                  unique(sample_new_stat_clusters_twice_iter2$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter2 <- split(sample_new_stat_clusters_twice_iter2, 
                           f = sample_new_stat_clusters_twice_iter2$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter2 <- map(one_group_mem_iter_2, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -938,14 +940,16 @@ sample_new_stat_clusters_twice_iter3 <- sample_new_stat_clusters_twice_iter2 %>%
                                             filter(Sample %in% iter2$Sample)
 
 # Group probabilities for iteration 3 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_3 <- group.mem.probs(pc1to12_twice_iter3, sample_new_stat_clusters_twice_iter3$one_two, 
+one_group_mem_iter_3 <- group.mem.probs(pc1to12_twice_iter3, 
+                                        sample_new_stat_clusters_twice_iter3$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter3$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter3 <- split(sample_new_stat_clusters_twice_iter3, 
                              f = sample_new_stat_clusters_twice_iter3$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter3 <- map(one_group_mem_iter_3, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -984,14 +988,16 @@ sample_new_stat_clusters_twice_iter4 <- sample_new_stat_clusters_twice_iter3 %>%
                                            filter(Sample %in% iter3$Sample)
 
 # Group probabilities for iteration 4 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_4 <- group.mem.probs(pc1to12_twice_iter4, sample_new_stat_clusters_twice_iter4$one_two, 
+one_group_mem_iter_4 <- group.mem.probs(pc1to12_twice_iter4, 
+                                        sample_new_stat_clusters_twice_iter4$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter4$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter4 <- split(sample_new_stat_clusters_twice_iter4, 
                              f = sample_new_stat_clusters_twice_iter4$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter4 <- map(one_group_mem_iter_4, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1031,14 +1037,16 @@ sample_new_stat_clusters_twice_iter5 <- sample_new_stat_clusters_twice_iter4 %>%
                                            filter(Sample %in% iter4$Sample)
 
 # Group probabilities for iteration 5 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_5 <- group.mem.probs(pc1to12_twice_iter5, sample_new_stat_clusters_twice_iter5$one_two, 
+one_group_mem_iter_5 <- group.mem.probs(pc1to12_twice_iter5, 
+                                        sample_new_stat_clusters_twice_iter5$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter5$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter5 <- split(sample_new_stat_clusters_twice_iter5, 
                              f = sample_new_stat_clusters_twice_iter5$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter5 <- map(one_group_mem_iter_5, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1077,14 +1085,16 @@ sample_new_stat_clusters_twice_iter6 <- sample_new_stat_clusters_twice_iter5 %>%
                                           filter(Sample %in% iter5$Sample)
 
 # Group probabilities for iteration 6 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_6 <- group.mem.probs(pc1to12_twice_iter6, sample_new_stat_clusters_twice_iter6$one_two, 
+one_group_mem_iter_6 <- group.mem.probs(pc1to12_twice_iter6, 
+                                        sample_new_stat_clusters_twice_iter6$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter6$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter6 <- split(sample_new_stat_clusters_twice_iter6, 
                              f = sample_new_stat_clusters_twice_iter6$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter6 <- map(one_group_mem_iter_6, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1123,14 +1133,16 @@ sample_new_stat_clusters_twice_iter7 <- sample_new_stat_clusters_twice_iter6 %>%
                                           filter(Sample %in% iter6$Sample)
 
 # Group probabilities for iteration 7 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_7 <- group.mem.probs(pc1to12_twice_iter7, sample_new_stat_clusters_twice_iter7$one_two, 
+one_group_mem_iter_7 <- group.mem.probs(pc1to12_twice_iter7,
+                                        sample_new_stat_clusters_twice_iter7$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter7$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter7 <- split(sample_new_stat_clusters_twice_iter7, 
                              f = sample_new_stat_clusters_twice_iter7$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter7 <- map(one_group_mem_iter_7, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1169,14 +1181,16 @@ sample_new_stat_clusters_twice_iter8 <- sample_new_stat_clusters_twice_iter7 %>%
                                            filter(Sample %in% iter7$Sample)
 
 # Group probabilities for iteration 8 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_8 <- group.mem.probs(pc1to12_twice_iter8, sample_new_stat_clusters_twice_iter8$one_two, 
+one_group_mem_iter_8 <- group.mem.probs(pc1to12_twice_iter8, 
+                                        sample_new_stat_clusters_twice_iter8$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter8$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter8 <- split(sample_new_stat_clusters_twice_iter8, 
                              f = sample_new_stat_clusters_twice_iter8$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter8 <- map(one_group_mem_iter_8, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1216,14 +1230,16 @@ sample_new_stat_clusters_twice_iter9 <- sample_new_stat_clusters_twice_iter8 %>%
                                           filter(Sample %in% iter8$Sample)
 
 # Group probabilities for iteration 9 of the group as one data set on PC's 1 through 12
-one_group_mem_iter_9 <- group.mem.probs(pc1to12_twice_iter9, sample_new_stat_clusters_twice_iter9$one_two, 
+one_group_mem_iter_9 <- group.mem.probs(pc1to12_twice_iter9, 
+                                        sample_new_stat_clusters_twice_iter9$one_two, 
                                         unique(sample_new_stat_clusters_twice_iter9$one_two)) 
 
 # Create list of data that is grouped the same as the group probability list
 one_samp_list_iter9 <- split(sample_new_stat_clusters_twice_iter9, 
                              f = sample_new_stat_clusters_twice_iter9$one_two)
 
-# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+# Convert the matrices of group membership probabilities to data frames 
+# and bind rows into one data frame
 one_group_mem_iter9 <- map(one_group_mem_iter_9, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
@@ -1250,8 +1266,9 @@ one_group_mem9 <- one_group_mem_iter9 %>%
                    filter(Sample %in% iter9$Sample)
 
 # Data frame of unassigned samples
-maha_unassigned <- bind_rows(iter1_unassigned, iter2_unassigned, iter3_unassigned, iter4_unassigned, 
-                      iter5_unassigned, iter6_unassigned, iter7_unassigned, iter8_unassigned) %>% 
+maha_unassigned <- bind_rows(iter1_unassigned, iter2_unassigned, iter3_unassigned, 
+                             iter4_unassigned, iter5_unassigned, iter6_unassigned, 
+                             iter7_unassigned, iter8_unassigned) %>% 
                       arrange(Sample) %>%
                       mutate(one_two = 2)
 
@@ -1369,7 +1386,7 @@ fviz_nbclust(unassigned_distready, kmeans, method = "gap_stat") # 1 optimal clus
 # 2 Cluster K-means
 unassigned_k2 <- kmeans(unassigned_distready, 
                          centers = 2, # number of clusters
-                         nstart = 50, # number of random initial configurations out of which the best one is chosen
+                         nstart = 50, # number of random initial configs out of which best is chosen
                          iter.max = 500) # number of allowable iterations allowed 
 
 # Visualize 2 cluster kmeans 
@@ -1466,7 +1483,7 @@ unass_pc1pc2_kmean2 <- sample_pca %>%
                  loadings.label.colour = "black",
                  loadings.colour = "gray45",
                  loadings.label.alpha = 0.9,
-                 loadings.label.size = 3,
+                 loadings.label.size = 3.5,
                  loadings.label.hjust = -0.5,
                  frame = TRUE,
                  frame.type = "norm",
@@ -1478,7 +1495,7 @@ unass_pc1pc2_kmean2 <- sample_pca %>%
                  size = 2,
                  alpha = core_alpha) +
         theme_bw() + 
-        #geom_text(label = .y$Sample) +
+       # geom_text(label = .y$Sample) +
         labs(x = "Principal Component 1",
              y = "Principal Component 2")
     )
@@ -1489,15 +1506,10 @@ unass_pc1pc2_kmean2 <- sample_pca %>%
 unass_pc1pc2_kmean2[[1]] + scale_fill_manual(values = c("black","black", "black", 
                                                         "black", "black", "black")) + 
   scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
-  scale_shape_manual(values=c(16, 18, 10, 3, 2, 1)) 
-
-
-
-
+  scale_shape_manual(values=c(3, 18, 16, 2, 43, 1)) 
 
 
 ###### Shiny app to biplot the various elements and PCs against one another #####
-
 ##   UI   ##
 ui_sample <- fluidPage(
   pageWithSidebar (
@@ -1508,7 +1520,7 @@ ui_sample <- fluidPage(
       selectInput('y', 'Y Variable', names(sample_pca[["pca_aug"]][[1]]),
                   selected = names(sample_pca[["pca_aug"]][[1]])[[15]]),
       selectInput('color', 'Color', names(sample_pca[["pca_aug"]][[1]]),
-                  selected = names(sample_pca[["pca_aug"]][[1]])[[2]]),
+                  selected = names(sample_pca[["pca_aug"]][[1]])[[103]]),
       #Slider for plot height
       sliderInput('plotHeight', 'Height of plot (in pixels)', 
                   min = 100, max = 2000, value = 550)
@@ -1519,7 +1531,6 @@ ui_sample <- fluidPage(
   )
 )
 
-
 ## Server ##
 server_sample <- function(input, output, session) {
   
@@ -1527,7 +1538,6 @@ server_sample <- function(input, output, session) {
   selectedData <- reactive({
     sample_pca[["pca_aug"]][[1]][, c(input$x, input$y, input$color)]
   })
-  
   
   output$plot1 <- renderPlotly({
     
@@ -1554,11 +1564,20 @@ server_sample <- function(input, output, session) {
 shinyApp(ui_sample, server_sample)
 
 
+# Assess membership probabilities of the outgroup samples
+# Out-groups 1, 2, and 5 are large enough to be assessed for Mahalanobis distance probabilities
+table(sample_pca[["pca_aug"]][[1]]$Kmeans_5)
 
+kmeans125_pcs <- sample_pca[["pca_aug"]][[1]] %>%
+                    filter(Kmeans_5 == 1 | Kmeans_5 == 2 | Kmeans_5 == 5) %>%
+                    select(.fittedPC1:.fittedPC12)
 
+kmeans125_samps <- sample_pca[["pca_aug"]][[1]] %>%
+                     filter(Kmeans_5 == 1 | Kmeans_5 == 2 | Kmeans_5 == 5) %>%
+                     select(Kmeans_5)
 
-sample_pca[["pca_aug"]][[1]] %>%
-  filter(id == "805" | Sample == "Crable 1067") %>% View()
+group.mem.probs(kmeans125_pcs, kmeans125_samps$Kmeans_5, 
+               unique(kmeans125_samps$Kmeans_5))
 
 ################################## Core Group Structure #########################################
 
