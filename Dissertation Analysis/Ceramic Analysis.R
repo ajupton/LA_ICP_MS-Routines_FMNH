@@ -698,7 +698,7 @@ ward_group_mem <- as.data.frame(bind_cols(ward_group_mem, ward_samp_df))
 ward_group_mem$assigned_val <- ward_group_mem[1:3][cbind(seq_len(nrow(ward_group_mem)), 
                                                          ward_group_mem$Ward_HCA_Cluster)]
 
-# Set the initial roup assignment value to zero to allow for comparisons
+# Set the initial group assignment value to zero to allow for comparisons
 ward_group_mem[cbind(seq_len(nrow(ward_group_mem)), ward_group_mem$Ward_HCA_Cluster)] <- 0
 
 # The heuristic I am using to assess group membership asks whether or not the probability of
@@ -707,6 +707,7 @@ ward_group_mem[cbind(seq_len(nrow(ward_group_mem)), ward_group_mem$Ward_HCA_Clus
 # Peeples (2010) in part and is a fairly conservative threshold. 
 ward_group_mem %>%
  # mutate(out_group_sum = `1` + `2` + `3`) %>%
+  mutate(assigned_val = as.numeric(assigned_val)) %>%
   mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10 & `3` < 10), 
                             Ward_HCA_Cluster, "unassigned")) %>% 
 #   filter(new_assign != "unassigned")  
@@ -741,11 +742,12 @@ kmean4_group_mem <- as.data.frame(kmean4_group_mem)
 kmean4_group_mem$assigned_val <- kmean4_group_mem[1:4][cbind(seq_len(nrow(kmean4_group_mem)), 
                                                            kmean4_group_mem$Kmeans_4)]
 
-# Set the initial roup assignment value to zero to allow for comparisons
+# Set the initial group assignment value to zero to allow for comparisons
 kmean4_group_mem[cbind(seq_len(nrow(kmean4_group_mem)), kmean4_group_mem$Kmeans_4)] <- 0
 
 # Assess membership probabilities using my heuristic
 kmean4_group_mem %>% 
+  mutate(assigned_val = as.numeric(assigned_val)) %>%
   mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10 & `3` < 10 & `4` < 10), 
                              Kmeans_4, "unassigned")) %>% 
   #   filter(new_assign != "unassigned")  
@@ -776,7 +778,7 @@ kmed5_group_mem <- as.data.frame(bind_cols(kmed5_group_mem, kmed5_samp_df))
 kmed5_group_mem$assigned_val <- kmed5_group_mem[1:5][cbind(seq_len(nrow(kmed5_group_mem)), 
                                                            kmed5_group_mem$Kmediods_5)]
 
-# Set the initial roup assignment value to zero to allow for comparisons
+# Set the initial group assignment value to zero to allow for comparisons
 kmed5_group_mem[cbind(seq_len(nrow(kmed5_group_mem)), kmed5_group_mem$Kmediods_5)] <- 0
 
 # Assess membership probabilities using my heuristic
@@ -812,7 +814,7 @@ kmed2_group_mem <- as.data.frame(bind_cols(kmed2_group_mem, kmed2_samp_df))
 kmed2_group_mem$assigned_val <- kmed2_group_mem[1:2][cbind(seq_len(nrow(kmed2_group_mem)), 
                                                            kmed2_group_mem$Kmediods_2)]
 
-# Set the initial roup assignment value to zero to allow for comparisons
+# Set the initial group assignment value to zero to allow for comparisons
 kmed2_group_mem[cbind(seq_len(nrow(kmed2_group_mem)), kmed2_group_mem$Kmediods_2)] <- 0
 
 # Assess membership probabilities using my heuristic
@@ -1216,7 +1218,6 @@ iter8_unassigned <- one_group_mem_iter8 %>%
 one_group_mem8 <- one_group_mem_iter8 %>%
                      filter(Sample %in% iter8$Sample)
 
-
 ### Iteration 9
 # Bind samples list to PCA data, filter out the unassigned samples after iteration eight 
 # and select PC data only for group membership probability calculation
@@ -1249,13 +1250,13 @@ one_samp_df_iter9 <- map(one_samp_list_iter9, as.data.frame) %>% bind_rows()
 # and convert to data frame for easier handling
 one_group_mem_iter9 <- as.data.frame(bind_cols(one_group_mem_iter9, one_samp_df_iter9))
 
-# Create data frame of sample to retain after fifth iteraction
+# Create data frame of sample to retain after eighth iteraction
 iter9 <- one_group_mem_iter9 %>%
             filter(one_two == 1) %>%
             filter(`1` > 1) %>%
             select(Sample) 
 
-# Create data frame of unassigned samples after fifth iteraction
+# Create data frame of unassigned samples after eighth iteraction
 iter9_unassigned <- one_group_mem_iter9 %>%
                       filter(one_two == 1) %>%
                       filter(`1` < 1) %>%
@@ -1563,21 +1564,284 @@ server_sample <- function(input, output, session) {
 
 shinyApp(ui_sample, server_sample)
 
+## Membership probabilties for outgroup Kmeans 5 group assignments
 
 # Assess membership probabilities of the outgroup samples
-# Out-groups 1, 2, and 5 are large enough to be assessed for Mahalanobis distance probabilities
+# Out-groups 2, 3, and 4 are large enough to be assessed for Mahalanobis distance probabilities
 table(sample_pca[["pca_aug"]][[1]]$Kmeans_5)
 
-kmeans125_pcs <- sample_pca[["pca_aug"]][[1]] %>%
-                    filter(Kmeans_5 == 1 | Kmeans_5 == 2 | Kmeans_5 == 5) %>%
+# Pull sample data for the Kmeans_5 samples
+kmeans234_samps <- sample_pca[["pca_aug"]][[1]] %>%
+                    filter(Kmeans_5 == 2 | Kmeans_5 == 3 | Kmeans_5 == 4) %>%
+                    select(Sample, Kmeans_5, .fittedPC1:.fittedPC12) %>%
+                    mutate(Kmeans_5 = as.numeric(Kmeans_5) - 1)
+
+# Pull PC data for the Kmeans_5 samples
+kmeans234_pcs <- kmeans234_samps %>%
+                  select(.fittedPC1:.fittedPC12)
+
+# Group membership probabilities for the groups large enough to be assessed 
+kmeans234_mem <- group.mem.probs(kmeans234_pcs, kmeans234_samps$Kmeans_5, 
+                   unique(kmeans234_samps$Kmeans_5))
+
+# Create list of data that is grouped the same as the group probability list
+kmeans234_samp_list <- split(kmeans234_samps, 
+                         f = kmeans234_samps$Kmeans_5)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+kmeans234_mem <- map(kmeans234_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+kmeans234_samp_df <- map(kmeans234_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+kmeans234_mem <- as.data.frame(bind_cols(kmeans234_mem, kmeans234_samp_df))
+
+# Reorder columns
+kmeans234_mem <- kmeans234_mem[, c(3, 1, 2, 4, 5)]
+
+# New column of membership probability for initially assigned group
+kmeans234_mem$assigned_val <- kmeans234_mem[1:3][cbind(seq_len(nrow(kmeans234_mem)), 
+                                                       as.numeric(kmeans234_mem$Kmeans_5))]
+
+# Determine column with the maximum value and assign to new column
+kmeans234_mem$max_value <- colnames(kmeans234_mem[1:3])[max.col(kmeans234_mem[1:3])]
+
+# There is broad disagreement in group assignment between the Kmeans/Kmediods 5 group methods
+# and the group membership probabilities. This isn't surprising since there is much overlap
+# between the groups on PC biplots. As a result, I'll take the maximum group membership
+# probability as assessed via Mahalanobis/Hotelling's T2 and re-run the assignments to 
+# refine the non-core group membership assignments. 
+
+# Samples and PCs for maximum membership after iteration one
+kmeans234_iter2_samps <- kmeans234_mem %>%
+                            select(Sample, max_value) %>%
+                            left_join(kmeans234_samps[-2], by = "Sample")
+
+# PC data for iteration 2 of Kmeans assignments
+kmeans234_iter2_pcs <- kmeans234_iter2_samps %>% select(.fittedPC1:.fittedPC12)
+
+# Group membership probs for iteration 2 of Kmeans
+kmeans234_mem_iter2 <- group.mem.probs(kmeans234_iter2_pcs, kmeans234_iter2_samps$max_value, 
+                                       unique(kmeans234_iter2_samps$max_value))
+
+# Unfortunatly, it appears that the groups as defined and refined from Kmeans do not 
+# hold up to statistical rigor. Let's try the Kmeans 2 group assignments 
+
+## Membership probabilties for outgroup Kmeans 2 group assignments
+
+# Assess membership probabilities of the outgroup samples for Kmeans_2
+table(sample_pca[["pca_aug"]][[1]]$Kmeans_2)
+
+# Pull sample data for the Kmeans_2 samples
+out_kmeans2_samps <- sample_pca[["pca_aug"]][[1]] %>%
+                        filter(Kmeans_2 != "Core") %>%
+                        select(Sample, Kmeans_2, .fittedPC1:.fittedPC12) 
+
+# Pull PC data for the Kmeans_2 samples
+out_kmeans2_pcs <- out_kmeans2_samps %>%
                     select(.fittedPC1:.fittedPC12)
 
-kmeans125_samps <- sample_pca[["pca_aug"]][[1]] %>%
-                     filter(Kmeans_5 == 1 | Kmeans_5 == 2 | Kmeans_5 == 5) %>%
-                     select(Kmeans_5)
+# Group membership probabilities for the groups large enough to be assessed 
+out_kmeans2_mem <- group.mem.probs(out_kmeans2_pcs, out_kmeans2_samps$Kmeans_2, 
+                                 unique(out_kmeans2_samps$Kmeans_2))
 
-group.mem.probs(kmeans125_pcs, kmeans125_samps$Kmeans_5, 
-               unique(kmeans125_samps$Kmeans_5))
+# Create list of data that is grouped the same as the group probability list
+out_kmeans2_samp_list <- split(out_kmeans2_samps[1:2], 
+                             f = out_kmeans2_samps$Kmeans_2)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+out_kmeans2_mem <- map(out_kmeans2_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+out_kmeans2_samp_df <- map(out_kmeans2_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment and convert to data frame for easier handling
+out_kmeans2_mem <- as.data.frame(bind_cols(out_kmeans2_mem, out_kmeans2_samp_df))
+
+# New column of membership probability for initially assigned group
+out_kmeans2_mem$assigned_val <- out_kmeans2_mem[1:3][cbind(seq_len(nrow(out_kmeans2_mem)), 
+                                                       as.numeric(out_kmeans2_mem$Kmeans_2))]
+
+# Set the initial group assignment value to zero to allow for comparisons
+out_kmeans2_mem[cbind(as.numeric(seq_len(nrow(out_kmeans2_mem))), 
+                      as.numeric(out_kmeans2_mem$Kmeans_2))] <- 0
+
+# Assess membership probabilities using my heuristic
+out_kmeans2_mem %>% 
+  mutate(assigned_val = as.numeric(assigned_val)) %>%
+  mutate(`1` = as.numeric(`1`)) %>%
+  mutate(`2` = as.numeric(`2`)) %>%
+  mutate(new_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                             Kmeans_2, "unassigned")) %>% 
+  #   filter(new_assign != "unassigned")  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# 50.4% unassigned rate suggests that there is some support for a two group soluation here
+# Let's remove the unassigned samples and run another iteration to firm up the outgroups
+
+#### Data frame of Outgroup Kmeans 2 assignments for group mem iteration 2
+out_kmeans2_iter2 <- out_kmeans2_mem %>% 
+                      mutate(assigned_val = as.numeric(assigned_val)) %>%
+                      mutate(`1` = as.numeric(`1`)) %>%
+                      mutate(`2` = as.numeric(`2`)) %>%
+                      mutate(new_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                             Kmeans_2, "unassigned")) %>%
+                      filter(new_assign != "unassigned")
+
+# Data frame of Outgroup Kmeans 2 unassigned sherds after group mem iteration 1
+out_kmeans2_iter2_unassigned <- out_kmeans2_mem %>% 
+                                  mutate(assigned_val = as.numeric(assigned_val)) %>%
+                                  mutate(`1` = as.numeric(`1`)) %>%
+                                  mutate(`2` = as.numeric(`2`)) %>%
+                                  mutate(new_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                                                             Kmeans_2, "unassigned")) %>%
+                                  filter(new_assign == "unassigned")
+
+# Sample and PC data for Kmeans 2 iteration 2
+out_kmeans2_iter2_samps <- out_kmeans2_iter2 %>%
+                            select(Sample, new_assign) %>%
+                            left_join(out_kmeans2_samps[-2], by = "Sample")
+
+# PC data for Kmenas sample 2
+out_kmeans2_iter2_pcs <- out_kmeans2_iter2_samps %>%
+                          select(.fittedPC1:.fittedPC12)
+
+# Membership probabilities for iteration 2 - only two samples need to become unassigned
+out_kmeans2_iter2_mem <- group.mem.probs(out_kmeans2_iter2_pcs, 
+                                         out_kmeans2_iter2_samps$new_assign, 
+                                         unique(out_kmeans2_iter2_samps$new_assign))
+
+# Create list of data that is grouped the same as the group probability list
+out_kmeans2_iter2_samps_list <- split(out_kmeans2_iter2_samps[1:2], 
+                                   f = out_kmeans2_iter2_samps$new_assign)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+out_kmeans2_iter2_mem <- map(out_kmeans2_iter2_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+out_kmeans2_iter2_samps_df <- map(out_kmeans2_iter2_samps_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment and convert to data frame for easier handling
+out_kmeans2_iter2_mem <- as.data.frame(bind_cols(out_kmeans2_iter2_mem, out_kmeans2_iter2_samps_df))
+
+# New column of membership probability for initially assigned group
+out_kmeans2_iter2_mem$assigned_val <- out_kmeans2_iter2_mem[1:3][cbind(seq_len(nrow(out_kmeans2_iter2_mem)), 
+                                                           as.numeric(out_kmeans2_iter2_mem$new_assign))]
+
+# Set the initial group assignment value to zero to allow for comparisons
+out_kmeans2_iter2_mem[cbind(as.numeric(seq_len(nrow(out_kmeans2_iter2_mem))), 
+                      as.numeric(out_kmeans2_iter2_mem$new_assign))] <- 0
+
+# Assess membership probabilities using my heuristic
+out_kmeans2_iter2_mem %>% 
+  mutate(assigned_val = as.numeric(assigned_val)) %>%
+  mutate(`1` = as.numeric(`1`)) %>%
+  mutate(`2` = as.numeric(`2`)) %>%
+  mutate(iter2_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                             new_assign, "unassigned")) %>% 
+  #   filter(new_assign != "unassigned")  
+  summarize(perc_unassigned = sum(iter2_assign == "unassigned")/n() * 100)
+# Great, only dropped 6.3% of the samples. Seems like we have statistically robust outgroups
+# Let's go ahead and define those here. 
+
+# Data frame of assigned outgroup samples
+outgroup_assignments <- out_kmeans2_iter2_mem %>%
+                          mutate(assigned_val = as.numeric(assigned_val)) %>%
+                          mutate(`1` = as.numeric(`1`)) %>%
+                          mutate(`2` = as.numeric(`2`)) %>%
+                          mutate(iter2_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                                                       new_assign, "unassigned")) %>%
+                          filter(iter2_assign != "unassigned") %>%
+                          mutate(Outgroup = iter2_assign) %>%
+                          select(Sample, Outgroup)
+
+# Data frame of unassigned outgroup samples
+outgroup_unassigned <- out_kmeans2_iter2_mem %>%
+                          mutate(assigned_val = as.numeric(assigned_val)) %>%
+                          mutate(`1` = as.numeric(`1`)) %>%
+                          mutate(`2` = as.numeric(`2`)) %>%
+                          mutate(new_assign = ifelse(assigned_val > 2.5 & `1` < 10 & `2` < 10, 
+                                                       new_assign, "unassigned")) %>%
+                          filter(new_assign == "unassigned") %>%
+                          full_join(out_kmeans2_iter2_unassigned, by = "Sample") %>%
+                          mutate(Outgroup = "unassigned") %>%
+                          select(Sample, Outgroup)
+
+# Data frame of all outgroup samples
+outgroup_assignments <- bind_rows(outgroup_assignments, outgroup_unassigned)
+
+
+# Visualize core and outgroup samples
+
+# Make data frame with core sample assignments and unassigned cluster assignments
+core_and_outgroup_assignments <- sample_new_stat_clusters_twice_iter9 %>%
+                                    filter(one_two == 1) %>%
+                                    mutate(Outgroup = "Core") %>%
+                                    select(-one_two) %>%
+                                    bind_rows(outgroup_assignments)
+
+# Join the core assignments to the original PCA data, which is stored in a nested prcomp list object
+sample_pca[["data"]][[1]] <- left_join(sample_pca[["data"]][[1]], core_and_unassigned_clusters, by = "Sample")
+
+# Join the core assignments to the augmented PCA data, which is stored in a nested prcomp list object
+sample_pca[["pca_aug"]][[1]] <- left_join(sample_pca[["pca_aug"]][[1]], 
+                                          core_and_unassigned_clusters, by = "Sample")
+
+# Create column to apply alpha to core group points in biplots for easier interpretation
+sample_pca[["data"]][[1]] <- sample_pca[["data"]][[1]] %>%
+  mutate(alpha = ifelse(Kmeans_5 == "Core", 0.25, 1)) %>%
+  mutate(alpha = as.vector(alpha))
+
+# Vectorize the alpha column
+core_alpha <- as.vector(sample_pca[["data"]][[1]]$alpha)
+
+# Create plot of PC 1 and PC 2 with the 90% conf intervals around the core and outgroups
+unass_pc1pc2_kmean2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray45",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 3.5,
+                 loadings.label.hjust = -0.5,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Kmeans_5", 
+                 shape = "Kmeans_5",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2,
+                 alpha = core_alpha) +
+        theme_bw() + 
+        # geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2")
+    )
+  ) %>%
+  pull(pca_graph)
+
+
+unass_pc1pc2_kmean2[[1]] + scale_fill_manual(values = c("black","black", "black", 
+                                                        "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  scale_shape_manual(values=c(3, 18, 16, 2, 43, 1)) 
+
+
+
+
+
+
+
+
+
+
+
 
 ################################## Core Group Structure #########################################
 
