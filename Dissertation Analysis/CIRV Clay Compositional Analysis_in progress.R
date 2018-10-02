@@ -211,7 +211,7 @@ server <- function(input, output, session) {
   
   # Combine the selected variables into a new data frame
   selectedData <- reactive({
-    claylog_good[, c(input$x, input$y)]
+    claylog_good[, c(input$x, input$y, input$color)]
   })
 
   

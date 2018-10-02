@@ -1,4 +1,5 @@
-# Checking for linear relationships with calcium
+##' Analysis of ceramic LA-ICP-MS data
+
 
 library(tidyverse)
 library(infer)
@@ -15,7 +16,12 @@ library(dendextend)
 library(factoextra)
 library(stats)
 library(ICSNP)
+library(shiny)
+library(shinydashboard)
+library(ggsci)
 
+
+##### Data Import and Cleaning #####
 samps <- read_csv("Upton_results_samples_shell_corrected_August_21_2018.csv")
 
 # Remove samples that hit shell to the point of being unusable or four samples
@@ -40,7 +46,7 @@ clay_samps <- clay_samps %>%
                 mutate(id = parse_number(clay$Sample)) %>%
                 arrange(Sample)
 
-###_______________ Add features to ceramic samples ________________________###
+##### Add features to ceramic samples #####
 # Extract sample unique sherd i.d. number 
 # First remove the run information from sample names
 samples$Sample <- str_replace(samples$Sample, pattern = "_1" %R% END, "")
@@ -119,11 +125,13 @@ sample_pcaready <- bind_cols(samples[,c(1:2, 71:80)], samples_good)
 sample_old_machine <- sample_pcaready %>% filter(Date < 2016)
 sample_new_pcaready <- sample_pcaready %>% filter(Date > 2016)
 
-########___________End of data cleaning, beginnging of statistical analysis__________########
+######## End of data cleaning, beginnging of statistical analysis ########
 
 # First step is to take the log base 10 of all samples to account for scalar differences
 # in the magnitude of chemical compositions across the elements, from major to minor to trace
 sample_new_pcaready[,13:56] <- log10(sample_new_pcaready[,13:56])
+
+##### PCA #####
 
 # Exploring PCA
 sample_pca <- sample_new_pcaready %>% 
@@ -174,7 +182,7 @@ geo2_pc1pc2 <-sample_pca %>%
                              loadings.label.alpha = 0.5,
                              loadings.label.size = 3,
                              loadings.label.hjust = 1.1,
-                             frame = FALSE,
+                             frame = TRUE,
                              frame.type = "norm",
                              data = .y, 
                              colour = "Geography_2", 
@@ -192,7 +200,8 @@ geo2_pc1pc2 <-sample_pca %>%
               pull(pca_graph)
 
 
-geo2_pc1pc2[[1]]
+geo2_pc1pc2[[1]] + scale_fill_manual(values = c("black","black")) + 
+  scale_color_manual(values = c("black","black","black")) 
 
 # This shows significant overlap but a general trend that follows the clay: in general there is
 # less elemental enrichment in clay resources in the southern portion of the CIRV compared to the northern part
@@ -458,11 +467,13 @@ ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) +
 # we can consider both prior information and statistical infomation in groups before moving on to 
 # group refinement. 
 
-###____________________________________Cluster Analysis_____________________________________###
 
-#####################################
-### Hierarchical Cluster Analysis ###
-#####################################
+
+########################## Cluster Analysis ########################
+
+
+##### Hierarchical Cluster Analysis #####
+
 # Now that I have a sense of the structure of the ceramic data set based on PCA, the next step
 # in compositional analysis is to see how the groups defined from prior information compare
 # to groups constructed using statistical clustering methods such as HCA, kmeans, and kmediods
@@ -538,9 +549,9 @@ fviz_cluster(list(data = sample_new_distready, cluster = complete_dist_groups))
 
 # Now let's see how these HCA groups correspond to other clustering methods 
 
-################################
-### K-means Cluster Analysis ###
-################################
+
+##### K-means Cluster Analysis #####
+
 
 # First, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
@@ -578,12 +589,11 @@ sample_new_stat_clusters <- sample_new_stat_clusters %>%
                               mutate(Kmeans_4 = k4$cluster)
 
 
-##################################
-### K-mediods Cluster Analysis ###
-##################################
+
+##### K-mediods Cluster Analysis #####
 
 # For k-mediods, we'll be using the pam function from the cluster package. pam stands for 
-# "partitioning acount mediods"
+# "partitioning around mediods"
 
 # As with k-means, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
@@ -624,7 +634,7 @@ Mode <- function(x) {
 mode_assignment <- apply(sample_new_stat_clusters, 1, Mode)
 
 
-####_________________Beging Mahalanobis distance and membership assignments________________###
+####_________________Begin Mahalanobis distance and membership assignments________________###
 
 # First, create a data frame of the first 12 PC's, which account for 90% of the variability in 
 # the elemental data set. This will allow group membership probability assessments with a
@@ -1245,9 +1255,7 @@ maha_unassigned <- bind_rows(iter1_unassigned, iter2_unassigned, iter3_unassigne
                       arrange(Sample) %>%
                       mutate(one_two = 2)
 
-##################################################################################################
-# End of Core-Unassigned membership iterations
-##################################################################################################
+###### End of Core-Unassigned membership iterations #####
 
 # Now that I have a core group and an unassigned group, it's important to assess whether or not
 # any of the unassigned samples might warrant inclusion back into the core group.
@@ -1342,9 +1350,219 @@ table(unassigned$Site)
 # Looking through the other pieces of a prior information, there don't appear to be any "smoking-gun"
 # trends that may help guide cluster analysis of the Unassigned group
 
+# Prepare samples for distance and clustering methods
+unassigned_distready <- unassigned %>%
+                          select(Si:Th)
+
+##### Kmeans of Unassigned #####
+# First, it's a good idea to use a few methods to assess the number of clusters to model
+# Elbow Method
+fviz_nbclust(unassigned_distready, kmeans, method = "wss") # 4 - 8 optimal clusters; 4-5 looks good
+# Silhouette Method
+fviz_nbclust(unassigned_distready, kmeans, method = "silhouette") # 2 optimal clusters
+# Gap Stat
+fviz_nbclust(unassigned_distready, kmeans, method = "gap_stat") # 1 optimal cluster
+
+# Based on the optimal cluster methods, it looks like we should run kmeans twice, once with 
+# 2 clusters and once with 5 clusters
+
+# 2 Cluster K-means
+unassigned_k2 <- kmeans(unassigned_distready, 
+                         centers = 2, # number of clusters
+                         nstart = 50, # number of random initial configurations out of which the best one is chosen
+                         iter.max = 500) # number of allowable iterations allowed 
+
+# Visualize 2 cluster kmeans 
+fviz_cluster(unassigned_k2, data = unassigned_distready)
+
+# Assign to clustering assignments data frame
+unassigned_stat_clusters <- maha_unassigned %>%
+                                select(Sample) %>%
+                                mutate(Kmeans_2 = unassigned_k2$cluster)
 
 
-################################## Core Group Structure #############################################
+# 5 Cluster K-means
+unassigned_k5 <- kmeans(unassigned_distready, centers = 5, nstart = 50, iter.max = 500)
+
+# Visualize 5 cluster kmeans
+fviz_cluster(unassigned_k5, data = unassigned_distready)
+
+# Assign to clustering assignments data frame
+unassigned_stat_clusters <- unassigned_stat_clusters %>%
+                              mutate(Kmeans_5 = unassigned_k5$cluster, 
+                                     Kmeans_2 = unassigned_k2$cluster)
+
+
+##### K-mediods of Unassigned #####
+
+# For k-mediods, we'll be using the pam function from the cluster package. pam stands for 
+# "partitioning around mediods"
+
+# As with k-means, it's a good idea to use a few methods to assess the number of clusters to model
+# Elbow Method
+fviz_nbclust(unassigned_distready, pam, method = "wss") # 5 looks optimal here
+# Silhouette Method
+fviz_nbclust(unassigned_distready, pam, method = "silhouette") # 2 optimal clusters
+# Gap Stat
+fviz_nbclust(unassigned_distready, pam, method = "gap_stat") # 1 optimal cluster
+
+# We'll run two clusters - one with 2 and one with 5
+# 2 cluster K-mediods
+pam2_unassigned <- pam(unassigned_distready, 2)
+
+# Plot 2 cluster k-mediods
+fviz_cluster(pam2_unassigned, data = unassigned_distready)
+
+# 5 cluster K-mediods
+pam5_unassigned <- pam(unassigned_distready, 5)
+
+# Plot 5 cluster k-mediods
+fviz_cluster(pam5_unassigned, data = unassigned_distready)
+
+# Assign k-mediods results to clustering assignments data frame
+unassigned_stat_clusters <- unassigned_stat_clusters %>%
+                                mutate(Kmediods_2 = pam2_unassigned$clustering, 
+                                       Kmediods_5 = pam5_unassigned$clustering)
+
+# There appears to be fairly broad agreement between kmeans and kmediods about the different
+# clusters present, but it is important to see how these hold up to comparison using visual inspection
+
+# Convert all unassigned statistical cluster assignments to character for joining
+unassigned_stat_clusters[,2:5] <- sapply(unassigned_stat_clusters[,2:5], as.character)
+
+# Make data frame with core sample assignments and unassigned cluster assignments
+core_and_unassigned_clusters <- sample_new_stat_clusters_twice_iter9 %>%
+                                  filter(one_two == 1) %>%
+                                  mutate(Kmeans_2 = "Core", 
+                                         Kmeans_5 = "Core", 
+                                         Kmediods_2 = "Core",
+                                         Kmediods_5 = "Core") %>%
+                                  select(-one_two) %>%
+                                  bind_rows(unassigned_stat_clusters)
+
+# Join the core assignments to the original PCA data, which is stored in a nested prcomp list object
+sample_pca[["data"]][[1]] <- left_join(sample_pca[["data"]][[1]], core_and_unassigned_clusters, by = "Sample")
+
+# Join the core assignments to the augmented PCA data, which is stored in a nested prcomp list object
+sample_pca[["pca_aug"]][[1]] <- left_join(sample_pca[["pca_aug"]][[1]], 
+                                          core_and_unassigned_clusters, by = "Sample")
+
+# Create column to apply alpha to core group points in biplots for easier interpretation
+sample_pca[["data"]][[1]] <- sample_pca[["data"]][[1]] %>%
+                                 mutate(alpha = ifelse(Kmeans_5 == "Core", 0.25, 1)) %>%
+                                 mutate(alpha = as.vector(alpha))
+
+# Vectorize the alpha column
+core_alpha <- as.vector(sample_pca[["data"]][[1]]$alpha)
+
+# Create plot of PC 1 and PC 2 with the 90% conf intervals around the core and outgroups
+unass_pc1pc2_kmean2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray45",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 3,
+                 loadings.label.hjust = -0.5,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Kmeans_5", 
+                 shape = "Kmeans_5",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2,
+                 alpha = core_alpha) +
+        theme_bw() + 
+        #geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2")
+    )
+  ) %>%
+  pull(pca_graph)
+
+
+unass_pc1pc2_kmean2[[1]] + scale_fill_manual(values = c("black","black", "black", 
+                                                        "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  scale_shape_manual(values=c(16, 18, 10, 3, 2, 1)) 
+
+
+
+
+
+
+###### Shiny app to biplot the various elements and PCs against one another #####
+
+##   UI   ##
+ui_sample <- fluidPage(
+  pageWithSidebar (
+    headerPanel('Bivariate Plotting'),
+    sidebarPanel(
+      selectInput('x', 'X Variable', names(sample_pca[["pca_aug"]][[1]]), 
+                  selected = names(sample_pca[["pca_aug"]][[1]])[[14]]),
+      selectInput('y', 'Y Variable', names(sample_pca[["pca_aug"]][[1]]),
+                  selected = names(sample_pca[["pca_aug"]][[1]])[[15]]),
+      selectInput('color', 'Color', names(sample_pca[["pca_aug"]][[1]]),
+                  selected = names(sample_pca[["pca_aug"]][[1]])[[2]]),
+      #Slider for plot height
+      sliderInput('plotHeight', 'Height of plot (in pixels)', 
+                  min = 100, max = 2000, value = 550)
+    ),
+    mainPanel(
+      plotlyOutput('plot1')
+    )
+  )
+)
+
+
+## Server ##
+server_sample <- function(input, output, session) {
+  
+  # Combine the selected variables into a new data frame
+  selectedData <- reactive({
+    sample_pca[["pca_aug"]][[1]][, c(input$x, input$y, input$color)]
+  })
+  
+  
+  output$plot1 <- renderPlotly({
+    
+    #Build plot with ggplot syntax 
+    p <- ggplot(data = sample_pca[["pca_aug"]][[1]], aes_string(x = input$x, 
+                                                 y = input$y, 
+                                                 color = input$color, 
+                                                 shape = input$color)) + 
+      geom_point() + 
+      theme(legend.title = element_blank()) + 
+      stat_ellipse(level = 0.9) +
+      scale_color_igv() + 
+      theme_bw() +
+      xlab(paste0(input$x, " (log base 10 ppm)")) +
+      ylab(paste0(input$y, " (log base 10 ppm)"))
+    
+    ggplotly(p) %>%
+      layout(height = input$plotHeight, autosize = TRUE, 
+             legend = list(font = list(size = 12))) 
+  })
+  
+}
+
+shinyApp(ui_sample, server_sample)
+
+
+
+
+
+sample_pca[["pca_aug"]][[1]] %>%
+  filter(id == "805" | Sample == "Crable 1067") %>% View()
+
+################################## Core Group Structure #########################################
+
+
 
 
 
