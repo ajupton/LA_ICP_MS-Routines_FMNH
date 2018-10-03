@@ -1368,7 +1368,7 @@ table(unassigned$Site)
 # Looking through the other pieces of a prior information, there don't appear to be any "smoking-gun"
 # trends that may help guide cluster analysis of the Unassigned group
 
-# Prepare samples for distance and clustering methods
+# Prepare samples for distance and clustering methods, we'll consider the elemental data here
 unassigned_distready <- unassigned %>%
                           select(Si:Th)
 
@@ -1733,7 +1733,7 @@ out_kmeans2_iter2_mem$assigned_val <- out_kmeans2_iter2_mem[1:3][cbind(seq_len(n
 out_kmeans2_iter2_mem[cbind(as.numeric(seq_len(nrow(out_kmeans2_iter2_mem))), 
                       as.numeric(out_kmeans2_iter2_mem$new_assign))] <- 0
 
-# Assess membership probabilities using my heuristic
+# Assess membership probabilities using my heuristic but reduced in-group membership to >2.5%
 out_kmeans2_iter2_mem %>% 
   mutate(assigned_val = as.numeric(assigned_val)) %>%
   mutate(`1` = as.numeric(`1`)) %>%
@@ -1828,9 +1828,10 @@ core_outgroup_pc1pc2 <- sample_pca %>%
   pull(pca_graph)
 
 
-core_outgroup_pc1pc2[[1]] + scale_fill_manual(values = c("black","black", "black", 
-                                                        "black", "black", "black")) + 
-  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+core_outgroup_pc1pc2[[1]] +
+  #scale_fill_manual(values = c("black","black", "black", 
+  #                                                      "black", "black", "black")) + 
+  #scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
   stat_ellipse(data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
                              aes(x = .fittedPC1, y = .fittedPC2, color = Outgroup)) +
   scale_shape_manual(values=c(15, 18, 2, 43)) 
@@ -1844,18 +1845,119 @@ core_outgroup_pc1pc2[[1]] + scale_fill_manual(values = c("black","black", "black
 
 
   sample_pca[["pca_aug"]][[1]] %>%
-    select(Sample, Site, Outgroup, Cultural_Group) %>%
+    select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class) %>%
     mutate(Outgroup = factor(Outgroup), 
            Site = factor(Site)) %>%
-    group_by(Outgroup, Cultural_Group) %>%
+    group_by(Outgroup, Vessel_Class) %>%
     summarize(n = n()) %>% View()
       
-    
+  sample_pca[["pca_aug"]][[1]] %>%
+    select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class, Time) %>%
+    mutate(Outgroup = factor(Outgroup), 
+           Site = factor(Site)) %>% 
+    group_by(Time, Outgroup) %>%
+    summarize(total = n()) %>% View()
 
 
 ################################## Core Group Structure #########################################
 
+# Let's explore here structure within the core group
+# First, isolate the core group samples and their accompanying elemental and PC data
+core_group_data <- sample_pca[["pca_aug"]][[1]] %>%
+                    filter(Outgroup == "Core")
+
+# Let's run some cluster analyses to see if the core group can be sub-divded 
+# Prepare a data frame of the elemental data for distance calculations
+core_distready <- core_group_data %>%
+                    select(Si:Th)
+  
+# Kmeans of Core #
+# First, it's a good idea to use a few methods to assess the number of clusters to model
+# Elbow Method
+fviz_nbclust(core_distready, kmeans, method = "wss") # 4-6 optimal clusters; 4-5 looks good
+# Silhouette Method
+fviz_nbclust(core_distready, kmeans, method = "silhouette") # 2 optimal clusters
+# Gap Stat
+fviz_nbclust(core_distready, kmeans, method = "gap_stat") # 1 optimal cluster
+
+# Based on the optimal cluster methods, it looks like we should run kmeans twice, once with 
+# 2 clusters and once with 5 clusters
+
+# 2 Cluster K-means
+core_k2 <- kmeans(core_distready, 
+                        centers = 2, # number of clusters
+                        nstart = 50, # number of random initial configs out of which best is chosen
+                        iter.max = 500) # number of allowable iterations allowed 
+  
+# Visualize 2 cluster kmeans 
+fviz_cluster(core_k2, data = core_distready)
+
+# Assign to clustering assignments data frame
+core_stat_clusters <- core_group_data %>%
+                              select(Sample) %>%
+                                mutate(Kmeans_2 = core_k2$cluster)
+
+# Let's compare the kmeans to kmediods
+core_kmed2 <- pam(core_distready, 2)
+fviz_cluster(core_kmed2, data = core_distready)
+
+fviz_cluster(core_kmed2, data = core_distready, geom = text, label = )
+
+core_group_data %>%
+  filter(Outgroup == "Core") %>%
+  select(-Kmeans_2:-Kmediods_5) %>%
+  left_join(core_stat_clusters, by = "Sample") %>%
+ggplot(aes(x = .fittedPC4, y = .fittedPC2, color = Geography_2, label = Site)) +
+  stat_ellipse(level = 0.9) +
+  geom_text(size = 2.5)
+
+# It appears as though there is broad agreement between the two cluster methods about there being
+# two clusters at approximately the same locations (with primary separation in the first PC). 
+# Kmeans seems to offer a more conservative soluation. We'll use that and see how it fairs in 
+# mahalanobis distance calculations. 
+
+core_pc1to12_samps <- core_group_data %>%
+                        select(Sample, .fittedPC1:.fittedPC12) %>%
+                        left_join(core_stat_clusters, by = "Sample")
+
+core_pc1to12 <- core_pc1to12_samps %>% select(.fittedPC1:.fittedPC12)
+
+
+# Group probabilities for the core kmeans 2 cluster solution on PC's 1 to 12 (90% of variability)
+core_kmean2_group_mem <- group.mem.probs(core_pc1to12, core_pc1to12_samps$Kmeans_2, 
+                                   unique(core_pc1to12_samps$Kmeans_2)) 
 
 
 
 
+
+
+
+# Create list of data that is grouped the same as the group probability list
+kmed2_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmediods_2")], 
+                         f = sample_new_stat_clusters$Kmediods_2)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+kmed2_group_mem <- map(kmed2_group_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+kmed2_samp_df <- map(kmed2_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+kmed2_group_mem <- as.data.frame(bind_cols(kmed2_group_mem, kmed2_samp_df))
+
+# New column of membership probability for initially assigned group
+kmed2_group_mem$assigned_val <- kmed2_group_mem[1:2][cbind(seq_len(nrow(kmed2_group_mem)), 
+                                                           kmed2_group_mem$Kmediods_2)]
+
+# Set the initial group assignment value to zero to allow for comparisons
+kmed2_group_mem[cbind(seq_len(nrow(kmed2_group_mem)), kmed2_group_mem$Kmediods_2)] <- 0
+
+# Assess membership probabilities using my heuristic
+kmed2_group_mem %>% 
+  mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 10 & `2` < 10), 
+                             Kmediods_2, "unassigned")) %>% 
+  # filter(assigned_val < `1` | assigned_val < `2`)  
+  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
+# A 75.32% unassigned using the heuristic criteria is better, but still doesn't hold up
