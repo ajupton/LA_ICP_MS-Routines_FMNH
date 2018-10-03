@@ -1782,38 +1782,39 @@ core_and_outgroup_assignments <- sample_new_stat_clusters_twice_iter9 %>%
                                     bind_rows(outgroup_assignments)
 
 # Join the core assignments to the original PCA data, which is stored in a nested prcomp list object
-sample_pca[["data"]][[1]] <- left_join(sample_pca[["data"]][[1]], core_and_unassigned_clusters, by = "Sample")
+sample_pca[["data"]][[1]] <- left_join(sample_pca[["data"]][[1]], core_and_outgroup_assignments, by = "Sample")
 
 # Join the core assignments to the augmented PCA data, which is stored in a nested prcomp list object
 sample_pca[["pca_aug"]][[1]] <- left_join(sample_pca[["pca_aug"]][[1]], 
-                                          core_and_unassigned_clusters, by = "Sample")
+                                          core_and_outgroup_assignments, by = "Sample")
 
 # Create column to apply alpha to core group points in biplots for easier interpretation
 sample_pca[["data"]][[1]] <- sample_pca[["data"]][[1]] %>%
-  mutate(alpha = ifelse(Kmeans_5 == "Core", 0.25, 1)) %>%
-  mutate(alpha = as.vector(alpha))
+                                mutate(core_alpha = ifelse(Outgroup == "Core", 0.25, 1)) %>%
+                                mutate(core_alpha = as.vector(core_alpha))
 
 # Vectorize the alpha column
-core_alpha <- as.vector(sample_pca[["data"]][[1]]$alpha)
+core_alpha <- as.vector(sample_pca[["data"]][[1]]$core_alpha)
 
 # Create plot of PC 1 and PC 2 with the 90% conf intervals around the core and outgroups
-unass_pc1pc2_kmean2 <- sample_pca %>%
+core_outgroup_pc1pc2 <- sample_pca %>%
   mutate(
     pca_graph = map2(
       .x = pca,
       .y = data,
       ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                 scale = 0,
                  loadings.label.repel = TRUE,
                  loadings.label.colour = "black",
                  loadings.colour = "gray45",
                  loadings.label.alpha = 0.9,
-                 loadings.label.size = 3.5,
+                 loadings.label.size = 2.5,
                  loadings.label.hjust = -0.5,
-                 frame = TRUE,
-                 frame.type = "norm",
+                 #frame = TRUE,
+                 #frame.type = "norm",
                  data = .y, 
-                 colour = "Kmeans_5", 
-                 shape = "Kmeans_5",
+                 colour = "Outgroup", 
+                 shape = "Outgroup",
                  frame.level = .9, 
                  frame.alpha = 0.001, 
                  size = 2,
@@ -1827,20 +1828,29 @@ unass_pc1pc2_kmean2 <- sample_pca %>%
   pull(pca_graph)
 
 
-unass_pc1pc2_kmean2[[1]] + scale_fill_manual(values = c("black","black", "black", 
+core_outgroup_pc1pc2[[1]] + scale_fill_manual(values = c("black","black", "black", 
                                                         "black", "black", "black")) + 
   scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
-  scale_shape_manual(values=c(3, 18, 16, 2, 43, 1)) 
+  stat_ellipse(data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
+                             aes(x = .fittedPC1, y = .fittedPC2, color = Outgroup)) +
+  scale_shape_manual(values=c(15, 18, 2, 43)) 
+
+
+
+  sample_pca[["pca_aug"]][[1]]$.fittedPC1
+  sample_pca[["data"]]
 
 
 
 
-
-
-
-
-
-
+  sample_pca[["pca_aug"]][[1]] %>%
+    select(Sample, Site, Outgroup, Cultural_Group) %>%
+    mutate(Outgroup = factor(Outgroup), 
+           Site = factor(Site)) %>%
+    group_by(Outgroup, Cultural_Group) %>%
+    summarize(n = n()) %>% View()
+      
+    
 
 
 ################################## Core Group Structure #########################################
