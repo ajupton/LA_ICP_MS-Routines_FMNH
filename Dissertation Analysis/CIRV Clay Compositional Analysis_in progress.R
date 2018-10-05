@@ -115,6 +115,7 @@ cp1p2_plot <- clay_pca %>%
             .x = pca,
             .y = data,
             ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
+                       scale = FALSE,
                        #loadings.label.repel = TRUE,
                        loadings.label.colour = "black",
                        loadings.colour = "gray85",

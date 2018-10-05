@@ -148,6 +148,9 @@ var_exp_sample <- sample_pca %>%
          cum_var_exp = cumsum(var_exp),
          pc = str_replace(pc, ".fitted", ""))
 
+# Check eigen values
+get_eigenvalue(prcomp(sample_new_pcaready%>% select(Si:Th)))
+
 # Looks like we need to retain the first 12 PC's to hit 90% of the data's variability
 # Graphing this out might help
 var_exp_sample %>% 
@@ -176,12 +179,12 @@ geo2_pc1pc2 <-sample_pca %>%
                   .x = pca,
                   .y = data,
                   ~ autoplot(.x, loadings = TRUE, loadings.label = TRUE,
-                             #loadings.label.repel = TRUE,
+                             loadings.label.repel = TRUE,
                              loadings.label.colour = "black",
-                             loadings.colour = "gray85",
+                             loadings.colour = "gray45",
                              loadings.label.alpha = 0.5,
                              loadings.label.size = 3,
-                             loadings.label.hjust = 1.1,
+                             #loadings.label.hjust = 1.1,
                              frame = TRUE,
                              frame.type = "norm",
                              data = .y, 
@@ -199,9 +202,9 @@ geo2_pc1pc2 <-sample_pca %>%
               ) %>%
               pull(pca_graph)
 
-
 geo2_pc1pc2[[1]] + scale_fill_manual(values = c("black","black")) + 
-  scale_color_manual(values = c("black","black","black")) 
+  scale_color_manual(values = c("black","black","black")) +
+  scale_shape_manual(values=c(18, 2)) 
 
 # This shows significant overlap but a general trend that follows the clay: in general there is
 # less elemental enrichment in clay resources in the southern portion of the CIRV compared to the northern part
@@ -468,15 +471,13 @@ ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) +
 # group refinement. 
 
 
-
 ########################## Cluster Analysis ########################
-
 
 ##### Hierarchical Cluster Analysis #####
 
 # Now that I have a sense of the structure of the ceramic data set based on PCA, the next step
 # in compositional analysis is to see how the groups defined from prior information compare
-# to groups constructed using statistical clustering methods such as HCA, kmeans, and kmediods
+# to groups constructed using statistical clustering methods such as HCA, kmeans, and kmedoids
 
 # Let's start with some tree-based methods (aka Hierarchical cluster analysis or HCA)
 # We'll use agglomerative methods here (bottom up) as opposed to divisive methods (top down)
@@ -549,10 +550,7 @@ fviz_cluster(list(data = sample_new_distready, cluster = complete_dist_groups))
 
 # Now let's see how these HCA groups correspond to other clustering methods 
 
-
 ##### K-means Cluster Analysis #####
-
-
 # First, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
 fviz_nbclust(sample_new_distready, kmeans, method = "wss") # 3 - 8 optimal clusters; 3-4 looks good
@@ -577,7 +575,6 @@ fviz_cluster(k3, data = sample_new_distready)
 sample_new_stat_clusters <- sample_new_stat_clusters %>%
                               mutate(Kmeans_3 = k3$cluster)
 
-
 # 4 Cluster K-means
 k4 <- kmeans(sample_new_distready, centers = 4, nstart = 50, iter.max = 500)
 
@@ -588,12 +585,10 @@ fviz_cluster(k4, data = sample_new_distready)
 sample_new_stat_clusters <- sample_new_stat_clusters %>%
                               mutate(Kmeans_4 = k4$cluster)
 
+##### K-medoids Cluster Analysis #####
 
-
-##### K-mediods Cluster Analysis #####
-
-# For k-mediods, we'll be using the pam function from the cluster package. pam stands for 
-# "partitioning around mediods"
+# For k-medoids, we'll be using the pam function from the cluster package. pam stands for 
+# "partitioning around medoids"
 
 # As with k-means, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
@@ -604,19 +599,19 @@ fviz_nbclust(sample_new_distready, pam, method = "silhouette") # 2 optimal clust
 fviz_nbclust(sample_new_distready, pam, method = "gap_stat") # 1 optimal cluster
 
 # We'll run two clusters - one with 2 and one with 5
-# 2 cluster K-mediods
+# 2 cluster K-medoids
 pam2 <- pam(sample_new_distready, 2)
 
-# Plot 2 cluster k-mediods
+# Plot 2 cluster k-medoids
 fviz_cluster(pam2, data = sample_new_distready)
 
-# 5 cluster K-mediods
+# 5 cluster K-medoids
 pam5 <- pam(sample_new_distready, 5)
 
-# Plot 5 cluster k-mediods
+# Plot 5 cluster k-medoids
 fviz_cluster(pam5, data = sample_new_distready)
 
-# Assign k-mediods results to clustering assignments data frame
+# Assign k-medoids results to clustering assignments data frame
 sample_new_stat_clusters <- sample_new_stat_clusters %>%
                               mutate(Kmediods_2 = pam2$clustering, 
                                      Kmediods_5 = pam5$clustering)
@@ -725,6 +720,10 @@ kmean4_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmeans_4,
 kmean4_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmeans_4")], 
                         f = sample_new_stat_clusters$Kmeans_4)
 
+# Reorder list to match the group membership probs
+kmean4_samp_list <- list(kmean4_samp_list$`1`, kmean4_samp_list$`3`, kmean4_samp_list$`4`,
+                         kmean4_samp_list$`2`)
+
 # Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
 kmean4_group_mem <- map(kmean4_group_mem, as.data.frame) %>% bind_rows()
 
@@ -752,11 +751,12 @@ kmean4_group_mem %>%
                              Kmeans_4, "unassigned")) %>% 
   #   filter(new_assign != "unassigned")  
   summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
-# At an 89.69%, it doesn't seem like kmeans 4 group clusters faired much better than Ward HCA
+# At an 99.26%, it doesn't seem like kmeans 4 group clusters faired much better than Ward HCA
+# In fact, this did not do well at all
 
 
-########### Kmediods (pam) 5 #################
-# Group probabilities for the kmediods (pam) 5 cluster solution on PC's 1 to 12 (90% of variability)
+########### Kmedoids (pam) 5 #################
+# Group probabilities for the kmedoids (pam) 5 cluster solution on PC's 1 to 12 (90% of variability)
 kmed5_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmediods_5, 
                                     unique(sample_new_stat_clusters$Kmediods_5)) 
 
@@ -789,10 +789,8 @@ kmed5_group_mem %>%
   summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
 # Ouch, at 95.58% unassigned using the heuristic criteria, this doesn't hold up
 
-
-
-########### Kmediods (pam) 2 #################
-# Group probabilities for the kmediods (pam) 2 cluster solution on PC's 1 to 12 (90% of variability)
+########### Kmedoids (pam) 2 #################
+# Group probabilities for the kmedoids (pam) 2 cluster solution on PC's 1 to 12 (90% of variability)
 kmed2_group_mem <- group.mem.probs(pc1to12, sample_new_stat_clusters$Kmediods_2, 
                                    unique(sample_new_stat_clusters$Kmediods_2)) 
 
@@ -819,7 +817,7 @@ kmed2_group_mem[cbind(seq_len(nrow(kmed2_group_mem)), kmed2_group_mem$Kmediods_2
 
 # Assess membership probabilities using my heuristic
 kmed2_group_mem %>% 
-  mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 10 & `2` < 10), 
+  mutate(new_assign = ifelse(assigned_val > 10 & (`1` < 10 & `2` < 10), 
                              Kmediods_2, "unassigned")) %>% 
  # filter(assigned_val < `1` | assigned_val < `2`)  
   summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
@@ -1411,10 +1409,10 @@ unassigned_stat_clusters <- unassigned_stat_clusters %>%
                                      Kmeans_2 = unassigned_k2$cluster)
 
 
-##### K-mediods of Unassigned #####
+##### K-medoids of Unassigned #####
 
-# For k-mediods, we'll be using the pam function from the cluster package. pam stands for 
-# "partitioning around mediods"
+# For k-medoids, we'll be using the pam function from the cluster package. pam stands for 
+# "partitioning around medoids"
 
 # As with k-means, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
@@ -1425,24 +1423,24 @@ fviz_nbclust(unassigned_distready, pam, method = "silhouette") # 2 optimal clust
 fviz_nbclust(unassigned_distready, pam, method = "gap_stat") # 1 optimal cluster
 
 # We'll run two clusters - one with 2 and one with 5
-# 2 cluster K-mediods
+# 2 cluster K-medoids
 pam2_unassigned <- pam(unassigned_distready, 2)
 
-# Plot 2 cluster k-mediods
+# Plot 2 cluster k-medoids
 fviz_cluster(pam2_unassigned, data = unassigned_distready)
 
-# 5 cluster K-mediods
+# 5 cluster K-medoids
 pam5_unassigned <- pam(unassigned_distready, 5)
 
-# Plot 5 cluster k-mediods
+# Plot 5 cluster k-medoids
 fviz_cluster(pam5_unassigned, data = unassigned_distready)
 
-# Assign k-mediods results to clustering assignments data frame
+# Assign k-medoids results to clustering assignments data frame
 unassigned_stat_clusters <- unassigned_stat_clusters %>%
                                 mutate(Kmediods_2 = pam2_unassigned$clustering, 
                                        Kmediods_5 = pam5_unassigned$clustering)
 
-# There appears to be fairly broad agreement between kmeans and kmediods about the different
+# There appears to be fairly broad agreement between kmeans and kmedoids about the different
 # clusters present, but it is important to see how these hold up to comparison using visual inspection
 
 # Convert all unassigned statistical cluster assignments to character for joining
@@ -1608,7 +1606,7 @@ kmeans234_mem$assigned_val <- kmeans234_mem[1:3][cbind(seq_len(nrow(kmeans234_me
 # Determine column with the maximum value and assign to new column
 kmeans234_mem$max_value <- colnames(kmeans234_mem[1:3])[max.col(kmeans234_mem[1:3])]
 
-# There is broad disagreement in group assignment between the Kmeans/Kmediods 5 group methods
+# There is broad disagreement in group assignment between the Kmeans/Kmedoids 5 group methods
 # and the group membership probabilities. This isn't surprising since there is much overlap
 # between the groups on PC biplots. As a result, I'll take the maximum group membership
 # probability as assessed via Mahalanobis/Hotelling's T2 and re-run the assignments to 
@@ -1771,9 +1769,7 @@ outgroup_unassigned <- out_kmeans2_iter2_mem %>%
 # Data frame of all outgroup samples
 outgroup_assignments <- bind_rows(outgroup_assignments, outgroup_unassigned)
 
-
-# Visualize core and outgroup samples
-
+### Visualize core and outgroup samples
 # Make data frame with core sample assignments and unassigned cluster assignments
 core_and_outgroup_assignments <- sample_new_stat_clusters_twice_iter9 %>%
                                     filter(one_two == 1) %>%
@@ -1829,12 +1825,92 @@ core_outgroup_pc1pc2 <- sample_pca %>%
 
 
 core_outgroup_pc1pc2[[1]] +
-  #scale_fill_manual(values = c("black","black", "black", 
-  #                                                      "black", "black", "black")) + 
-  #scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  scale_fill_manual(values = c("black","black", "black", 
+                                                        "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
   stat_ellipse(data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
                              aes(x = .fittedPC1, y = .fittedPC2, color = Outgroup)) +
   scale_shape_manual(values=c(15, 18, 2, 43)) 
+
+
+# Group membership probabilities for Outgroup 1, 2, unassigned, and core
+core_out_unass_samps <- sample_pca[["pca_aug"]][[1]] %>%
+                          select(Sample, Outgroup, .fittedPC1:.fittedPC12)
+
+core_out_unass_pcs <- core_out_unass_samps %>% select(.fittedPC1:.fittedPC12)
+
+core_out_unass_mem <- group.mem.probs(core_out_unass_pcs, core_out_unass_samps$Outgroup, 
+                                      unique(core_out_unass_samps$Outgroup))
+
+# Create list of data that is grouped the same as the group probability list
+core_out_samp_list <- split(core_out_unass_samps[, c("Sample", "Outgroup")], 
+                         f = core_out_unass_samps$Outgroup)
+
+# Reorder list to match the order of the group membership probs
+core_out_samp_list <- list(core_out_samp_list$Core, core_out_samp_list$`1`, core_out_samp_list$unassigned,
+                           core_out_samp_list$`2`)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+core_out_unass_mem <- map(core_out_unass_mem, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+core_out_samp_df <- map(core_out_samp_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment from Kmed 5
+# and convert to data frame for easier handling
+core_out_unass_mem <- as.data.frame(bind_cols(core_out_unass_mem, core_out_samp_df))
+
+# Create table for dissertation
+outgroup_core_table <- core_out_unass_mem %>%
+                        right_join(sample_pca[["pca_aug"]][[1]][, c("Sample", "Site")]) %>%
+                        filter(Outgroup != "unassigned", Outgroup != "Core") %>%
+                        select(-unassigned) %>%
+                        arrange(Outgroup) %>%
+                        mutate(Sample = parse_number(Sample))
+
+# Write table to csv
+# write_csv(outgroup_core_table, "outgroups - core.csv")
+
+
+# Create plot of PC 1 and PC 5 with the 90% conf intervals around the core and outgroups
+core_outgroup_pc1pc5 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, x = 1, y = 5, loadings = TRUE, loadings.label = TRUE,
+                 scale = 0,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray45",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 2.5,
+                 loadings.label.hjust = -0.5,
+                 #frame = TRUE,
+                 #frame.type = "norm",
+                 data = .y, 
+                 colour = "Outgroup", 
+                 shape = "Outgroup",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2,
+                 alpha = core_alpha) +
+        theme_bw() + 
+        # geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 5")
+    )
+  ) %>%
+  pull(pca_graph)
+
+core_outgroup_pc1pc5[[1]] +
+  scale_fill_manual(values = c("black","black", "black", 
+                               "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  stat_ellipse(data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
+               aes(x = .fittedPC1, y = .fittedPC5, color = Outgroup)) +
+  scale_shape_manual(values=c(15, 18, 2, 43)) 
+
 
 
 
@@ -1897,7 +1973,7 @@ core_stat_clusters <- core_group_data %>%
                               select(Sample) %>%
                                 mutate(Kmeans_2 = core_k2$cluster)
 
-# Let's compare the kmeans to kmediods
+# Let's compare the kmeans to kmedoids
 core_kmed2 <- pam(core_distready, 2)
 fviz_cluster(core_kmed2, data = core_distready)
 
