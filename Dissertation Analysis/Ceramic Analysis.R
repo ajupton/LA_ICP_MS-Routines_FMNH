@@ -1912,22 +1912,77 @@ core_outgroup_pc1pc5[[1]] +
   scale_shape_manual(values=c(15, 18, 2, 43)) 
 
 
+# Create plot of PC 1 and PC 5 with the 90% conf intervals around the core and outgroups
+core_outgroup_pc1pc5 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, x = 1, y = 5, loadings = TRUE, loadings.label = TRUE,
+                 scale = 0,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray45",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 2.5,
+                 loadings.label.hjust = -0.5,
+                 #frame = TRUE,
+                 #frame.type = "norm",
+                 data = .y, 
+                 colour = "Outgroup", 
+                 shape = "Outgroup",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2,
+                 alpha = core_alpha) +
+        theme_bw() + 
+        # geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 5")
+    )
+  ) %>%
+  pull(pca_graph)
+
+core_outgroup_pc1pc5[[1]] +
+  scale_fill_manual(values = c("black","black", "black", 
+                               "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  stat_ellipse(level = 0.9, data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
+               aes(x = .fittedPC1, y = .fittedPC5, color = Outgroup)) +
+  scale_shape_manual(values=c(15, 18, 2, 43)) 
+
+# Create plot of Mo and Sc for elemental separation
+# Prep data
+pca_aug <- sample_pca[["pca_aug"]][[1]]
+
+# Plot
+ggplot(pca_aug, aes(x = Yb, y = Mg, color = Outgroup, shape = Outgroup)) + 
+  geom_point() + 
+  stat_ellipse(level = 0.9, data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
+               aes(x = Yb, y = Mg, color = Outgroup)) +
+  scale_shape_manual(values=c(15, 18, 2, 43)) +
+  scale_fill_manual(values = c("black","black", "black", 
+                                  "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  xlab("Yb (log base 10 ppm)") +
+  ylab("Mg (log base 10 ppm") +
+  theme_bw()
 
 
-  sample_pca[["pca_aug"]][[1]]$.fittedPC1
-  sample_pca[["data"]]
+# Explore Outgroup 1 sherds
+pca_aug %>%
+  select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class, Geography_2) %>%
+  group_by(Outgroup, Site, Vessel_Class) %>%
+  summarize(n = n()) %>% View()
 
-
-
-
-  sample_pca[["pca_aug"]][[1]] %>%
+pca_aug %>%
     select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class) %>%
     mutate(Outgroup = factor(Outgroup), 
            Site = factor(Site)) %>%
     group_by(Outgroup, Vessel_Class) %>%
     summarize(n = n()) %>% View()
       
-  sample_pca[["pca_aug"]][[1]] %>%
+pca_aug %>%
     select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class, Time) %>%
     mutate(Outgroup = factor(Outgroup), 
            Site = factor(Site)) %>% 
@@ -2003,37 +2058,44 @@ core_pc1to12 <- core_pc1to12_samps %>% select(.fittedPC1:.fittedPC12)
 core_kmean2_group_mem <- group.mem.probs(core_pc1to12, core_pc1to12_samps$Kmeans_2, 
                                    unique(core_pc1to12_samps$Kmeans_2)) 
 
-
-
-
-
-
-
 # Create list of data that is grouped the same as the group probability list
-kmed2_samp_list <- split(sample_new_stat_clusters[, c("Sample", "Kmediods_2")], 
-                         f = sample_new_stat_clusters$Kmediods_2)
+core_kmean2_samp_list <- split(core_pc1to12_samps[, c("Sample", "Kmeans_2")], 
+                           f = core_pc1to12_samps$Kmeans_2)
 
 # Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
-kmed2_group_mem <- map(kmed2_group_mem, as.data.frame) %>% bind_rows()
+core_kmean2_group_mem <- map(core_kmean2_group_mem, as.data.frame) %>% bind_rows()
 
 # Convert the list of matrices of sample names to data frames and bind into one data frame
-kmed2_samp_df <- map(kmed2_samp_list, as.data.frame) %>% bind_rows()
+core_kmean2_samp_df <- map(core_kmean2_samp_list, as.data.frame) %>% bind_rows()
 
 # Bind to initial sample id and group assignment from Kmed 5
 # and convert to data frame for easier handling
-kmed2_group_mem <- as.data.frame(bind_cols(kmed2_group_mem, kmed2_samp_df))
+core_kmean2_group_mem <- as.data.frame(bind_cols(core_kmean2_group_mem, core_kmean2_samp_df))
 
 # New column of membership probability for initially assigned group
-kmed2_group_mem$assigned_val <- kmed2_group_mem[1:2][cbind(seq_len(nrow(kmed2_group_mem)), 
-                                                           kmed2_group_mem$Kmediods_2)]
+core_kmean2_group_mem$assigned_val <- core_kmean2_group_mem[1:2][cbind(seq_len(nrow(core_kmean2_group_mem)), 
+                                                                       core_kmean2_group_mem$Kmeans_2)]
 
 # Set the initial group assignment value to zero to allow for comparisons
-kmed2_group_mem[cbind(seq_len(nrow(kmed2_group_mem)), kmed2_group_mem$Kmediods_2)] <- 0
+core_kmean2_group_mem[cbind(seq_len(nrow(core_kmean2_group_mem)), core_kmean2_group_mem$Kmeans_2)] <- 0
 
-# Assess membership probabilities using my heuristic
-kmed2_group_mem %>% 
-  mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 10 & `2` < 10), 
-                             Kmediods_2, "unassigned")) %>% 
-  # filter(assigned_val < `1` | assigned_val < `2`)  
-  summarize(perc_unassigned = sum(new_assign == "unassigned")/n() * 100)
-# A 75.32% unassigned using the heuristic criteria is better, but still doesn't hold up
+# Assess membership probabilities using an outlier heuristic of less than 1% probability in another group
+# 
+core_kmean_iter1 <- core_kmean2_group_mem %>% 
+                      mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 1 & `2` < 1), 
+                                                 Kmeans_2, "Core")) %>% 
+                      #summarize(perc_unassigned = sum(new_assign == "Core")/n() * 100)
+                      mutate(Kmeans_2_iter2 = new_assign) %>%
+                      select(Sample, Kmeans_2_iter2)
+# Results in a 81.97% remaining in Core and shaving off the difference
+
+# Assign Core, Core1 and Core2 memberships after iteration 1
+core_stat_clusters <- core_stat_clusters %>%  
+                        left_join(core_kmean_iter1, by = "Sample")
+
+# Append Kmeans_2 + Core groups to PC data
+core_pc1to12_samps <- core_pc1to12_samps %>% 
+                        left_join(core_stat_clusters[,c("Sample", "Kmeans_2_iter2")], by = "Sample")
+
+
+
