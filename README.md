@@ -19,5 +19,5 @@ Features coming include:
 - Building scree plots to show variance explained
 - Exploring eigenvector loadings on PCA
 - Using Partitioning Around Mediods based on Silhouette Analysis to compare to HCA clusters
-- Visualizing a priorr information about sherds to provide insight to the analysis 
+- Visualizing a prior information about sherds to provide insight to the analysis 
 
