@@ -2080,7 +2080,6 @@ core_kmean2_group_mem$assigned_val <- core_kmean2_group_mem[1:2][cbind(seq_len(n
 core_kmean2_group_mem[cbind(seq_len(nrow(core_kmean2_group_mem)), core_kmean2_group_mem$Kmeans_2)] <- 0
 
 # Assess membership probabilities using an outlier heuristic of less than 1% probability in another group
-# 
 core_kmean_iter1 <- core_kmean2_group_mem %>% 
                       mutate(new_assign = ifelse(assigned_val > 2.5 & (`1` < 1 & `2` < 1), 
                                                  Kmeans_2, "Core")) %>% 
@@ -2098,4 +2097,10 @@ core_pc1to12_samps <- core_pc1to12_samps %>%
                         left_join(core_stat_clusters[,c("Sample", "Kmeans_2_iter2")], by = "Sample")
 
 
+# Group probabilities for the core kmeans 2 cluster solution on PC's 1 to 12 (90% of variability)
+core_kmean2_group_mem_iter2 <- group.mem.probs(core_pc1to12, core_pc1to12_samps$Kmeans_2_iter2,
+                                         unique(core_pc1to12_samps$Kmeans_2_iter2)) 
 
+
+
+table(core_stat_clusters$Kmeans_2_iter2)
