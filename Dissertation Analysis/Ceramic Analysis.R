@@ -2290,8 +2290,6 @@ core_A_kmed2_df <- map(core_A_kmed2_list, as.data.frame) %>% bind_rows()
 core_A_kmed2_group_prob <- as.data.frame(bind_cols(core_A_kmed2_group_prob, 
                                                    core_A_kmed2_df))
 
-
-
 # New column of membership probability for initially assigned group
 core_A_kmed2_group_prob$assigned_val <- core_A_kmed2_group_prob[1:2][cbind(seq_len(nrow(core_A_kmed2_group_prob)), as.numeric(core_A_kmed2_group_prob$Kmedoids_2))]
 
@@ -2314,5 +2312,65 @@ core_A_kmed2_group_prob_iter1 <- core_A_kmed2_group_prob %>%
 core_A <- core_A %>% 
             left_join(core_A_kmed2_group_prob_iter1, by = "Sample")
 
+# PC data for Core A group membership probabilities iteration 2
+core_A_iter1pc1to12 <- core_A %>%
+                        filter(Kmedoids_iter1 != "Core A") %>%
+                        select(.fittedPC1:.fittedPC12)
+
+# Group Membership data for kmeds iteration 2 Core A
+core_A_iter2 <- core_A %>% filter(Kmedoids_iter1 != "Core A")
 
 
+# Group probabilities for the core kmeans 2 cluster solution on PC's 1 to 12 (90% of variability)
+core_A_kmed2_group_prob_iter2 <- group.mem.probs(core_A_iter1pc1to12, core_A_iter2$Kmedoids_iter1,
+                                           unique(core_A_iter2$Kmedoids_iter1)) 
+
+# Create list of data that is grouped the same as the group probability list
+core_A_kmed2_iter_list <- split(core_A_iter2[, c("Sample", "Kmedoids_iter1")], 
+                           f = core_A_iter2$Kmedoids_2)
+
+# Convert the matrices of group membership probabilities to data frames and bind rows into one data frame
+core_A_kmed2_group_prob_iter2 <- map(core_A_kmed2_group_prob_iter2, as.data.frame) %>% bind_rows()
+
+# Convert the list of matrices of sample names to data frames and bind into one data frame
+core_A_kmed2_group_prob <- map(core_A_kmed2_iter_list, as.data.frame) %>% bind_rows()
+
+# Bind to initial sample id and group assignment 
+# and convert to data frame for easier handling
+core_A_kmed2_group_prob_iter2 <- as.data.frame(bind_cols(core_A_kmed2_group_prob_iter2, 
+                                                         core_A_kmed2_group_prob))
+
+# New column of membership probability for initially assigned group
+core_A_kmed2_group_prob_iter2$assigned_val <- core_A_kmed2_group_prob_iter2[1:2][cbind(seq_len(nrow(core_A_kmed2_group_prob_iter2)), as.numeric(core_A_kmed2_group_prob_iter2$Kmedoids_iter1))]
+
+# Set the initial group assignment value to zero to allow for comparisons
+core_A_kmed2_group_prob_iter2[cbind(seq_len(nrow(core_A_kmed2_group_prob_iter2)), 
+                              as.numeric(core_A_kmed2_group_prob_iter2$Kmedoids_iter1))] <- 0
+
+# Assess membership probabilities using an outlier heuristic of less than 10% probability in another group
+core_A_kmed2_group_prob_iter2 <- core_A_kmed2_group_prob_iter2 %>% 
+  mutate(new_assign = ifelse(assigned_val > 3 & `1` < 2.5 & `2` < 2.5, 
+                             Kmedoids_iter1, "Core A")) %>% 
+  #summarize(perc_unassigned = sum(new_assign == Kmedoids_iter1)/n() * 100)
+  mutate(Kmedoids_iter2 = new_assign) %>%
+  select(Sample, Kmedoids_iter2)
+# Results in a 100% remaining in their Kmedoids iter1 assignment - suggests a great cluster solution
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Pickup here with a PCA graph of Core A1 and A2 sherds as well as a table of membership probs for 
+# both of these groups
+
+# Next step is to start a new script that looks at constructing networks based on BR coefs of similarities
+# in site=based representation in the different groups (Outgroup 1, Outgroup 2, Core A, Core A1, Core A1, Core B and Core C)
