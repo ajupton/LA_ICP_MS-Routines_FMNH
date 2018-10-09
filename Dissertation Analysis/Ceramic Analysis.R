@@ -149,7 +149,7 @@ var_exp_sample <- sample_pca %>%
          pc = str_replace(pc, ".fitted", ""))
 
 # Check eigen values
-get_eigenvalue(prcomp(sample_new_pcaready%>% select(Si:Th)))
+get_eigenvalue(prcomp(sample_new_pcaready %>% select(Si:Th)))
 
 # Looks like we need to retain the first 12 PC's to hit 90% of the data's variability
 # Graphing this out might help
@@ -2347,24 +2347,92 @@ core_A_kmed2_group_prob_iter2$assigned_val <- core_A_kmed2_group_prob_iter2[1:2]
 core_A_kmed2_group_prob_iter2[cbind(seq_len(nrow(core_A_kmed2_group_prob_iter2)), 
                               as.numeric(core_A_kmed2_group_prob_iter2$Kmedoids_iter1))] <- 0
 
-# Assess membership probabilities using an outlier heuristic of less than 10% probability in another group
+# Assess membership probabilities using a tighter heuristic of less than 2.5% probability in another group
+# and greater than 3% probability in-group
 core_A_kmed2_group_prob_iter2 <- core_A_kmed2_group_prob_iter2 %>% 
   mutate(new_assign = ifelse(assigned_val > 3 & `1` < 2.5 & `2` < 2.5, 
                              Kmedoids_iter1, "Core A")) %>% 
-  #summarize(perc_unassigned = sum(new_assign == Kmedoids_iter1)/n() * 100)
+  #summarize(perc_assigned = sum(new_assign == Kmedoids_iter1)/n() * 100)
   mutate(Kmedoids_iter2 = new_assign) %>%
   select(Sample, Kmedoids_iter2)
 # Results in a 100% remaining in their Kmedoids iter1 assignment - suggests a great cluster solution
 
+# Prep data for export
+core_A_kmed2_group_prob_iter2_table <- core_A_kmed2_group_prob_iter2 %>%
+                                        left_join(pca_aug[, c("Sample", "Site")]) %>%
+                                        mutate(id = parse_number(Sample)) 
 
+# Export csv of Core A1 and A2 Groups
+write_csv(core_A_kmed2_group_prob_iter2_table, "Core A groups.csv")
 
+# Make table of Core A1/A2 sherd assignments
+core_A_kmed2_group_prob_iter2_table <- core_A_kmed2_group_prob_iter2_table %>%
+                                        mutate(Core_A_Sub = paste0("Core A", Kmedoids_iter1))
 
+# Bind the Core A1/A2 table to Core A PC data
+core_A_subs <- core_A %>%
+                left_join(core_A_kmed2_group_prob_iter2_table[, c("Sample", "Core_A_Sub")], 
+                          by = "Sample") %>%
+                mutate(Core_A_Sub = ifelse(is.na(Core_A_Sub), "Core A", Core_A_Sub)) %>% 
+                select(-Kmeans_2:-Kmeans_2_iter2, -Kmedoids_2) 
 
+# Plot of PC1 - PC2 of the Core A, A1, and A2 group assignments
+core_A_subs %>%
+  filter(Core_A_Sub == "Core A1" | Core_A_Sub == "Core A2") %>%
+  ggplot(aes(x = .fittedPC1, y = .fittedPC2, color = Core_A_Sub, shape = Core_A_Sub)) + 
+  geom_point() + 
+  stat_ellipse(level = 0.9) +
+  scale_shape_manual(values=c(43, 15, 18)) +
+  scale_fill_manual(values = c("black","black", "black", 
+                               "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", 
+                                "black", "black", "black")) +
+  xlab("Principal Component 1") +
+  ylab("Principal Component 2") +
+  geom_point(data = filter(core_A_subs[, c(".fittedPC1", ".fittedPC2", "Core_A_Sub")], 
+                           Core_A_Sub == "Core A"), 
+             aes(x = .fittedPC1, y = .fittedPC2, alpha = 0.2)) +
+  theme_bw()
 
+# Plot of Mg - Ni of the Core A, A1 and A2 group assignments
+pca_aug %>%
+  filter(Core_A_Sub == "Core A1" | Core_A_Sub == "Core A2") %>%
+  ggplot(aes(x = Mg, y = Ni, color = Core_A_Sub, shape = Core_A_Sub)) + 
+  geom_point() + 
+  stat_ellipse(level = 0.9) +
+  scale_shape_manual(values=c(43, 15, 18)) +
+  scale_fill_manual(values = c("black","black", "black", 
+                               "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", 
+                                "black", "black", "black")) +
+  xlab("Magnesium (log base 10 ppm)") +
+  ylab("Nickel (log base 10 ppm)") +
+  geom_point(data = filter(pca_aug[, c("Mg", "Ni", "Core_A_Sub")], 
+                           Core_A_Sub == "Core A"), 
+             aes(x = Mg, y = Ni, alpha = 0.2)) +
+  theme_bw()
+  
+# Add Core A sub-group data to the augmented PCA data for Shiny app biplotting 
+# (using the above shiny app)
+sample_pca[["pca_aug"]][[1]] <- sample_pca[["pca_aug"]][[1]] %>%
+                                left_join(core_A_subs[, c("Sample", "Core_A_Sub")], 
+                                          by = "Sample")
 
+# Do the same to the non-list pca aug data object 
+pca_aug <- pca_aug %>%
+            left_join(core_A_subs[, c("Sample", "Core_A_Sub")], by = "Sample") %>%
+            mutate(Final_Assign = Core_A_Sub) %>%
+            mutate(Final_Assign = ifelse(is.na(Core_A_Sub), Core_Outgroup, Core_A_Sub)) 
+  
+table(pca_aug$Final_Assign)
 
-
-
+# Plot all assignments
+pca_aug %>%
+  ggplot(aes(x = .fittedPC1, y = .fittedPC2, color = Final_Assign)) + 
+  geom_point() + 
+  stat_ellipse(level = 0.9) +
+  xlab("Principal Component 1") +
+  ylab("Principal Component 2") 
 
 
 
@@ -2374,3 +2442,18 @@ core_A_kmed2_group_prob_iter2 <- core_A_kmed2_group_prob_iter2 %>%
 
 # Next step is to start a new script that looks at constructing networks based on BR coefs of similarities
 # in site=based representation in the different groups (Outgroup 1, Outgroup 2, Core A, Core A1, Core A1, Core B and Core C)
+
+# Table of all group assignments by site
+group_assign_by_site <- pca_aug %>%
+                          select(Sample, Site, Final_Assign) %>%
+                          group_by(Final_Assign, Site) %>%
+                          summarize(count = n()) %>%
+                          spread(Final_Assign, count)
+
+# Confirm assignments
+colSums(group_assign_by_site[, -1], na.rm = TRUE)
+table(pca_aug$Final_Assign)  
+
+# Write out csv file of group assignments
+# write_csv(group_assign_by_site, "group assignments by site.csv")
+  
