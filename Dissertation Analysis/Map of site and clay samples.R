@@ -23,12 +23,12 @@ ggmap(b) + geom_point(data = cc_loc, aes(x = lon, y = lat, shape = Type)) +
 # Create transparent background map to overlay on geologic map
 map <- ggplot() + geom_point(data = cc_loc, aes(x = lon, y = lat, shape = Type)) + 
         theme(
-          panel.background = element_rect(fill = "transparent") # bg of the panel
-          , plot.background = element_rect(fill = "transparent") # bg of the plot
-          , panel.grid.major = element_blank() # get rid of major grid
-          , panel.grid.minor = element_blank() # get rid of minor grid
-          , legend.background = element_rect(fill = "transparent") # get rid of legend bg
-          , legend.box.background = element_rect(fill = "transparent") # get rid of legend panel bg
+          panel.background = element_rect(fill = "transparent"), # bg of the panel
+           plot.background = element_rect(fill = "transparent"), # bg of the plot
+           panel.grid.major = element_blank(), # get rid of major grid
+           panel.grid.minor = element_blank(), # get rid of minor grid
+           legend.background = element_rect(fill = "transparent"), # get rid of legend bg
+           legend.box.background = element_rect(fill = "transparent") # get rid of legend panel bg
         ) +
         xlab("") + ylab("")
 
