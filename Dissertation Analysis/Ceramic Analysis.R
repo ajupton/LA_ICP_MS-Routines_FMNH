@@ -2353,8 +2353,8 @@ core_A_kmed2_group_prob_iter2 <- core_A_kmed2_group_prob_iter2 %>%
   mutate(new_assign = ifelse(assigned_val > 3 & `1` < 2.5 & `2` < 2.5, 
                              Kmedoids_iter1, "Core A")) %>% 
   #summarize(perc_assigned = sum(new_assign == Kmedoids_iter1)/n() * 100)
-  mutate(Kmedoids_iter2 = new_assign) %>%
-  select(Sample, Kmedoids_iter2)
+  mutate(Kmedoids_iter2 = new_assign) #%>%
+  #select(Sample, Kmedoids_iter2)
 # Results in a 100% remaining in their Kmedoids iter1 assignment - suggests a great cluster solution
 
 # Prep data for export
@@ -2394,6 +2394,20 @@ core_A_subs %>%
              aes(x = .fittedPC1, y = .fittedPC2, alpha = 0.2)) +
   theme_bw()
 
+# Add Core A sub-group data to the augmented PCA data for Shiny app biplotting 
+# (using the above shiny app)
+sample_pca[["pca_aug"]][[1]] <- sample_pca[["pca_aug"]][[1]] %>%
+  left_join(core_A_subs[, c("Sample", "Core_A_Sub")], 
+            by = "Sample")
+
+# Do the same to the non-list pca aug data object 
+pca_aug <- pca_aug %>%
+  left_join(core_A_subs[, c("Sample", "Core_A_Sub")], by = "Sample") %>%
+  mutate(Final_Assign = Core_A_Sub) %>%
+  mutate(Final_Assign = ifelse(is.na(Core_A_Sub), Core_Outgroup, Core_A_Sub)) 
+
+table(pca_aug$Final_Assign)
+
 # Plot of Mg - Ni of the Core A, A1 and A2 group assignments
 pca_aug %>%
   filter(Core_A_Sub == "Core A1" | Core_A_Sub == "Core A2") %>%
@@ -2412,19 +2426,6 @@ pca_aug %>%
              aes(x = Mg, y = Ni, alpha = 0.2)) +
   theme_bw()
   
-# Add Core A sub-group data to the augmented PCA data for Shiny app biplotting 
-# (using the above shiny app)
-sample_pca[["pca_aug"]][[1]] <- sample_pca[["pca_aug"]][[1]] %>%
-                                left_join(core_A_subs[, c("Sample", "Core_A_Sub")], 
-                                          by = "Sample")
-
-# Do the same to the non-list pca aug data object 
-pca_aug <- pca_aug %>%
-            left_join(core_A_subs[, c("Sample", "Core_A_Sub")], by = "Sample") %>%
-            mutate(Final_Assign = Core_A_Sub) %>%
-            mutate(Final_Assign = ifelse(is.na(Core_A_Sub), Core_Outgroup, Core_A_Sub)) 
-  
-table(pca_aug$Final_Assign)
 
 # Plot all assignments
 pca_aug %>%
