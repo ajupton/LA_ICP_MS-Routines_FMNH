@@ -831,7 +831,8 @@ sample_pca[['pca_aug']][[1]] <- sample_pca[['pca_aug']][[1]] %>% select(-Kmeans_
 ########### Core and Unassigned Group Assignments ############################################
 # Another common method used for constructing core chemical compositional groups in
 # archaeology is to initially treat the entire data set as one large group and iteratively
-# removing samples with a membership probability of less than 1%
+# removing samples with a membership probability of less than 1%. A Core group can thus 
+# be defined and sub-groups may be identified within the Core. 
 
 # Double the PC data so the group can be compared to itself
 pc1to12_twice <- bind_rows(pc1to12, pc1to12)
@@ -1983,7 +1984,6 @@ ggplot(pca_aug, aes(x = Yb, y = Mg, color = Outgroup, shape = Outgroup)) +
   ylab("Mg (log base 10 ppm") +
   theme_bw()
 
-
 # Explore Outgroup 1 sherds
 pca_aug %>%
   select(Sample, Site, Outgroup, Cultural_Group, Vessel_Class, Geography_2) %>%
@@ -2457,3 +2457,5 @@ table(pca_aug$Final_Assign)
 # Write out csv file of group assignments
 # write_csv(group_assign_by_site, "group assignments by site.csv")
   
+
+
