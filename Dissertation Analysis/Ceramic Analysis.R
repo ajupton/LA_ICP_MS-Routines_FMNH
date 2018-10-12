@@ -2499,6 +2499,6 @@ table(pca_aug$Final_Assign)
 
 # Write out csv file of group assignments
 # write_csv(group_assign_by_site, "group assignments by site.csv")
-# write_csv(group_assign_by_site, "group assignments by site-geo.csv") 
+# write_csv(group_assign_by_site_geo, "group assignments by site-geo.csv") 
 
 
