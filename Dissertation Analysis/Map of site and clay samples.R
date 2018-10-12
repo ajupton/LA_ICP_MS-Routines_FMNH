@@ -20,7 +20,7 @@ b <- get_googlemap(center = c(lon = lon_mid, lat = lat_mid), zoom = 9,
 ggmap(b) + geom_point(data = cc_loc, aes(x = lon, y = lat, shape = Type)) + 
   geom_text_repel(data = cc_loc[c(1:17),], aes(x = lon, y = lat, label = Site_Sample))
 
-# Create transparent background map to overlay on geologic map
+# Create transparent background map to overlay on bedrock geology map
 map <- ggplot() + geom_point(data = cc_loc, aes(x = lon, y = lat, shape = Type)) + 
         theme(
           panel.background = element_rect(fill = "transparent"), # bg of the panel

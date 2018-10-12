@@ -1512,6 +1512,10 @@ unass_pc1pc2_kmean2[[1]] + scale_fill_manual(values = c("black","black", "black"
   scale_shape_manual(values=c(3, 18, 16, 2, 43, 1)) 
 
 
+## Add final assignments to shiny app data
+sample_pca[["pca_aug"]][[1]] <- sample_pca[["pca_aug"]][[1]] %>%
+  left_join(pca_aug[, c("Sample", "Final_Assign")], by = "Sample")
+  
 ###### Shiny app to biplot the various elements and PCs against one another #####
 ##   UI   ##
 ui_sample <- fluidPage(
@@ -1971,7 +1975,7 @@ core_outgroup_pc1pc5[[1]] +
 # Prep data
 pca_aug <- sample_pca[["pca_aug"]][[1]]
 
-# Plot
+# Plot of ytterbium and magnesium of core-outgroup separation
 ggplot(pca_aug, aes(x = Yb, y = Mg, color = Outgroup, shape = Outgroup)) + 
   geom_point() + 
   stat_ellipse(level = 0.9, data = filter(sample_pca[["pca_aug"]][[1]], Outgroup != "unassigned"), 
@@ -2213,7 +2217,7 @@ pca_aug %>%
 # is instructive of variation within the core group. 
 # Next, we'll set about searching for structure within the Core A Sub-Group
 
-#### Core A Sub-Group Structure ####
+###### Core A Sub-Group Structure #######
 
 # Append Kmeans_2 + Core groups to PC data
 core_pc1to12_samps <- core_pc1to12_samps %>% 
@@ -2427,15 +2431,40 @@ pca_aug %>%
   theme_bw()
   
 
-# Plot all assignments
+# Plot all assignments along PC1 and PC2
 pca_aug %>%
+  filter(Final_Assign != "unassigned") %>%
   ggplot(aes(x = .fittedPC1, y = .fittedPC2, color = Final_Assign)) + 
   geom_point() + 
   stat_ellipse(level = 0.9) +
   xlab("Principal Component 1") +
-  ylab("Principal Component 2") 
+  ylab("Principal Component 2") + 
+  geom_point(data = filter(pca_aug, Final_Assign == "unassigned"), 
+             aes(x = .fittedPC1, y = .fittedPC2, color = Final_Assign, alpha = 0.4)) +
+  theme_bw() +
+  scale_color_d3()
 
+# Plot all assignments along Mg and Mo
+pca_aug %>%
+  filter(Final_Assign != "unassigned") %>%
+  ggplot(aes(x = Mg, y = Mo, color = Final_Assign)) + 
+  geom_point() + 
+  stat_ellipse(level = 0.9) +
+  xlab("Mg (log base 10 ppm)") +
+  ylab("Mo (log base 10 ppm)") + 
+  geom_point(data = filter(pca_aug, Final_Assign == "unassigned"), 
+             aes(x = Mg, y = Mo, color = Final_Assign, alpha = 0.4)) +
+  theme_bw() +
+  scale_color_d3()
 
+# Averages and standard deviations of each of the identified compositional groups
+pca_aug %>%
+  select(Final_Assign, Si:Th) %>%
+  gather(Element, Si:Th, -Final_Assign) %>%
+  mutate(`Si:Th` = 10^`Si:Th`) %>% # convert from log 10
+  group_by(Final_Assign, Element) %>%
+  summarize(mean = mean(`Si:Th`, na.rm = TRUE), std = sd(`Si:Th`, na.rm = TRUE)) %>%
+  write_csv("Ceramic final group assignment element ave and std.csv")
 
 
 # Pickup here with a PCA graph of Core A1 and A2 sherds as well as a table of membership probs for 
@@ -2451,12 +2480,25 @@ group_assign_by_site <- pca_aug %>%
                           summarize(count = n()) %>%
                           spread(Final_Assign, count)
 
+# Table of all group assignments by site AND geography
+group_assign_by_site_geo <- pca_aug %>%
+                              select(Sample, Site, Final_Assign, Geography_2) %>%
+                              group_by(Final_Assign, Site, Geography_2) %>%
+                              summarize(count = n()) %>%
+                              spread(Final_Assign, count)
+
+pca_aug %>%
+  select(Sample, Final_Assign, Geography_2) %>%
+  group_by(Final_Assign, Geography_2) %>%
+  summarize(count = n()) %>%
+  spread(Final_Assign, count)
+
 # Confirm assignments
 colSums(group_assign_by_site[, -1], na.rm = TRUE)
 table(pca_aug$Final_Assign)  
 
 # Write out csv file of group assignments
 # write_csv(group_assign_by_site, "group assignments by site.csv")
-  
+# write_csv(group_assign_by_site, "group assignments by site-geo.csv") 
 
 
