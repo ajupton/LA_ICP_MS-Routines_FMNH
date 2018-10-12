@@ -1893,7 +1893,7 @@ outgroup_core_table <- core_out_unass_mem %>%
 
 
 # Create plot of PC 1 and PC 2 with the 90% conf intervals around the core and outgroups
-core_outgroup_pc1pc5 <- sample_pca %>%
+core_outgroup_pc1pc2 <- sample_pca %>%
   mutate(
     pca_graph = map2(
       .x = pca,
@@ -1985,7 +1985,7 @@ ggplot(pca_aug, aes(x = Yb, y = Mg, color = Outgroup, shape = Outgroup)) +
                                   "black", "black", "black")) + 
   scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
   xlab("Yb (log base 10 ppm)") +
-  ylab("Mg (log base 10 ppm") +
+  ylab("Mg (log base 10 ppm)") +
   theme_bw()
 
 # Explore Outgroup 1 sherds
@@ -2398,6 +2398,49 @@ core_A_subs %>%
              aes(x = .fittedPC1, y = .fittedPC2, alpha = 0.2)) +
   theme_bw()
 
+# Add Core A sub-groups to pca data
+sample_pca$data[[1]] <- sample_pca$data[[1]] %>%
+                          left_join(core_A_subs[, c("Sample", "Core_A_Sub")])
+
+# Plot Core A and Core A sub-groups using autoplot
+core_A_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, x = 1, y = 2, loadings = TRUE, loadings.label = TRUE,
+                 scale = 0,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray45",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 2.5,
+                 loadings.label.hjust = -0.5,
+                 #frame = TRUE,
+                 #frame.type = "norm",
+                 data = .y, 
+                 colour = "Core_A_Sub", 
+                 shape = "Core_A_Sub",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2,
+                 alpha = .00001) +
+        theme_bw() + 
+        # geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2")
+    )
+  ) %>%
+  pull(pca_graph)
+
+core_A_pc1pc2[[1]] +
+  scale_fill_manual(values = c("black","black", "black", 
+                               "black", "black", "black")) + 
+  scale_color_manual(values = c("black","black","black", "black", "black", "black")) +
+  stat_ellipse(data = filter(sample_pca[["pca_aug"]][[1]], !is.na(Core_A_Sub) | Core_A_Sub != "Core A"), 
+               aes(x = .fittedPC1, y = .fittedPC2, color = Core_A_Sub)) +
+  scale_shape_manual(values=c(2, 15, 18, 43)) 
+
 # Add Core A sub-group data to the augmented PCA data for Shiny app biplotting 
 # (using the above shiny app)
 sample_pca[["pca_aug"]][[1]] <- sample_pca[["pca_aug"]][[1]] %>%
@@ -2425,7 +2468,7 @@ pca_aug %>%
                                 "black", "black", "black")) +
   xlab("Magnesium (log base 10 ppm)") +
   ylab("Nickel (log base 10 ppm)") +
-  geom_point(data = filter(pca_aug[, c("Mg", "Ni", "Core_A_Sub")], 
+  geom_point(data = filter(pca_aug[, c("Mg", "Ni", "Mo", "Core_A_Sub")], 
                            Core_A_Sub == "Core A"), 
              aes(x = Mg, y = Ni, alpha = 0.2)) +
   theme_bw()
@@ -2457,6 +2500,46 @@ pca_aug %>%
   theme_bw() +
   scale_color_d3()
 
+# Append Final Assignments to PCA data
+sample_pca$data[[1]] <- sample_pca$data[[1]] %>%
+                          left_join(pca_aug[, c("Sample", "Final_Assign")])
+
+# Plot Core A and Core A sub-groups using autoplot
+final_assign_pc1pc2 <- sample_pca %>%
+  mutate(
+    pca_graph = map2(
+      .x = pca,
+      .y = data,
+      ~ autoplot(.x, x = 1, y = 2, loadings = TRUE, loadings.label = TRUE,
+                 scale = 0,
+                 loadings.label.repel = TRUE,
+                 loadings.label.colour = "black",
+                 loadings.colour = "gray25",
+                 loadings.label.alpha = 0.9,
+                 loadings.label.size = 3.5,
+                 #loadings.label.hjust = -0.5,
+                 frame = TRUE,
+                 frame.type = "norm",
+                 data = .y, 
+                 colour = "Final_Assign", 
+                 #shape = "Final_Assign",
+                 frame.level = .9, 
+                 frame.alpha = 0.001, 
+                 size = 2, 
+                 alpha = .3) +
+        theme_bw() + 
+        # geom_text(label = .y$Sample) +
+        labs(x = "Principal Component 1",
+             y = "Principal Component 2")
+    )
+  ) %>%
+  pull(pca_graph)
+
+final_assign_pc1pc2[[1]] +
+  theme_bw() +
+  scale_color_d3()
+
+
 # Averages and standard deviations of each of the identified compositional groups
 pca_aug %>%
   select(Final_Assign, Si:Th) %>%
@@ -2487,11 +2570,11 @@ group_assign_by_site_geo <- pca_aug %>%
                               summarize(count = n()) %>%
                               spread(Final_Assign, count)
 
-pca_aug %>%
-  select(Sample, Final_Assign, Geography_2) %>%
-  group_by(Final_Assign, Geography_2) %>%
-  summarize(count = n()) %>%
-  spread(Final_Assign, count)
+group_assign_by_geo_class <- pca_aug %>%
+                    select(Sample, Final_Assign, Geography_2, Vessel_Class) %>%
+                    group_by(Final_Assign, Geography_2, Vessel_Class) %>%
+                    summarize(count = n()) %>%
+                    spread(Final_Assign, count)
 
 # Confirm assignments
 colSums(group_assign_by_site[, -1], na.rm = TRUE)
@@ -2500,5 +2583,15 @@ table(pca_aug$Final_Assign)
 # Write out csv file of group assignments
 # write_csv(group_assign_by_site, "group assignments by site.csv")
 # write_csv(group_assign_by_site_geo, "group assignments by site-geo.csv") 
+# write_csv(group_assign_by_geo_class, "group assignments by geo-vessel class.csv")
 
+pca_aug %>%
+  filter(Final_Assign == "Core A2") %>% View()
 
+# Component loadings for first 12 principal components
+pc_loadings <- sample_pca$pca[[1]]$rotation %>%
+                as.data.frame() %>%
+                rownames_to_column(var = "element") %>%
+                select(element:PC12)
+
+# write_csv(pc_loadings, "pc1 - 12 loadings.csv")
