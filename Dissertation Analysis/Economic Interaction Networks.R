@@ -96,13 +96,14 @@ BRsim <- function(x, correction, rescale) {
         } else {
           divisor.final <- max(zero.categ.a, zero.categ.b) - joint.absence+0.5
         }
-        results[s1,s2] <- round((1 - (sum(abs(x[s1, ] / sum(x[s1,]) - x[s2, ] / sum(x[s2,]))))/2)/divisor.final, digits=3)
+        results[s1,s2] <- round((1 - (sum(abs(x[s1,] / sum(x[s1,]) - x[s2,] / sum(x[s2,]))))/2)/divisor.final,
+                                digits=3)
       }
     } 
   } else {  
     for (s1 in 1:rd) {
       for (s2 in 1:rd) {
-        results[s1,s2] <- round(1 - (sum(abs(x[s1, ] / sum(x[s1,]) - x[s2, ] / sum(x[s2,]))))/2, digits=3)
+        results[s1,s2] <- round(1 - (sum(abs(x[s1,] / sum(x[s1,]) - x[s2, ] / sum(x[s2,]))))/2, digits=3)
       }
     }
   }
@@ -161,3 +162,47 @@ BR_au <- function(x, rescale = FALSE, counts = TRUE) {
   }
 }
 
+# Before we run the BR functions, the data frame needs to have the Sites become a row name
+# because the BR functions all take as inputs counts or percentages only. 
+rownames(comp_group_refined) <- comp_group_refined$Site 
+comp_group_refined <- comp_group_refined[, -1]
+
+# Also need to change NAs into 0 (two methods provided below)
+comp_group_refined <- comp_group_refined %>%
+                        mutate_all(funs(replace(., is.na(.), 0)))
+
+#    comp_group_refined %>%
+#      mutate_all(funs(coalesce(., 0L)))
+
+# Lost the rownames during manipulation, need to add them again
+rownames(comp_group_refined) <- comp_group$Site
+
+# A big advantage of Gianmarco's BR function is a succinct correlation plot. It can be thought
+# of as a "heat-map" for BR similarities. 
+BRsim(comp_group_refined, correction = FALSE, rescale = TRUE)
+
+eco_BR <- BR_au(comp_group_refined, rescale = TRUE)
+
+ecoBRgraph <- graph_from_adjacency_matrix(eco_BR, weighted = T)
+BRel <- as_edgelist(ecoBRgraph)
+BRw <- as.data.frame(E(ecoBRgraph)$weight)
+BRwel <- cbind(BRel, BRw)
+BRwel <- rename(BRwel, weight = `E(ecoBRgraph)$weight`)
+
+
+# Assessing the distribution of the BR coefficients
+BRwel %>%
+  filter(`1` != `2`) %>% # drop recursive edges
+  ggplot(aes(x = weight)) + 
+  geom_histogram(aes(y = ..density..), bins = 20, colour = "black", fill = "white") +
+  geom_density(alpha = 0.2) +
+  geom_vline(aes(xintercept = mean(weight, na.rm = T)),   # Ignore NA values for mean
+             color = "red", linetype = "dashed", size = 1) +
+  xlab("Rescaled BR Coefficients") +
+  ylab("Density") +
+  theme_minimal() 
+
+# Mean of BR coefficients (this will be used as a cutoff point for giving edges)
+BRwel %>%
+  filter(`1` != `2`) %>%
+  summarise(Mean = mean(weight)) 
