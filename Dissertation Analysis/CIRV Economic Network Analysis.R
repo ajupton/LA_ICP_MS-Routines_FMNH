@@ -109,7 +109,7 @@ plot(ecopost_eb, BReco_g_post, col = membership(ecopost_eb), vertex.label.cex = 
 title(main = "Edge Betweenness Community Detection in \n the Economic Network", 
       cex.main = 1.5)
 
-#-----------------Pre Randonmization for Pre-Migration Period Economic BR--------------####
+#------------------Pre Randomization for Pre-Migration Period Economic BR--------------####
 #----------------------------------PRE_MIGRATION------------------------------------------#
 
 # Initiate empty list for assessing BR pre-migration average path length and transitivity
@@ -198,7 +198,7 @@ p.ecopre.degree <- ggplot(ecopre.degree, aes(x = unlist(ecopre.degree))) +
 plot_grid(p.ecopre.pl, p.ecopre.trans, p.ecopre.density, p.ecopre.degree)
 
 # Calculate the proportion of graphs with an average path length lower than observed
-sum(ecopre.pl < mean_distance(BReco_g_pre, directed = False))/5000*100
+sum(ecopre.pl < mean_distance(BReco_g_pre, directed = FALSE))/5000*100
 
 # Calculate the proportion of graphs with a transitivity (mean clustering coefficient) 
 # lower than our observed
@@ -210,7 +210,7 @@ sum(ecopre.density < edge_density(BReco_g_pre))/5000*100
 # Calculate the proportion of graphs with a mean degree lower than observed
 sum(ecopre.degree < mean(degree(BReco_g_pre)))/5000*100
 
-#-----------------Post Randonmization for Post-Migration Period Economic BR--------------####
+#------------------Post Randomization for Post-Migration Period Economic BR--------------####
 #----------------------------------POST_MIGRATION------------------------------------------#
 
 # Initiate empty list for assessing BR pre-migration average path length and transitivity
@@ -260,7 +260,7 @@ p.ecopost.pl <- ggplot(ecopost.pl, aes(x = unlist(ecopost.pl))) +
   geom_vline(xintercept = (mean_distance(BReco_g_post, directed = FALSE)), 
              linetype = "dashed", color = "red") +
   geom_density() +
-  ggtitle("Distribution of 5000 Random Graph Average Shortest Path Lengths & \nPre-Migration Period Average Shortest Path Length") + 
+  ggtitle("Distribution of 5000 Random Graph Average Shortest Path Lengths & \nPost-Migration Period Average Shortest Path Length") + 
   xlab("Average Shortest Path Length") +
   ylab("")
 
@@ -270,7 +270,7 @@ p.ecopost.trans <- ggplot(ecopost.trans, aes(x = unlist(ecopost.trans))) +
   geom_histogram(aes(y = ..density..), bins = 10) + 
   geom_vline(xintercept = (transitivity(BReco_g_post)), linetype = "dashed", color = "red") +
   geom_density() +
-  ggtitle("Distribution of Transitivity in 5000 Random Models & \nPre-Migration Period Network Transitivity") + 
+  ggtitle("Distribution of Transitivity in 5000 Random Models & \nPost-Migration Period Network Transitivity") + 
   xlab("Transitivity (or Clustering Coefficient)") +
   ylab("")
 
@@ -280,7 +280,7 @@ p.ecopost.density <- ggplot(ecopost.density, aes(x = unlist(ecopost.density))) +
   geom_histogram(aes(y = ..density..), bins = 19) + 
   geom_vline(xintercept = (edge_density(BReco_g_post)), linetype = "dashed", color = "red") +
   geom_density() +
-  ggtitle("Distribution of 5000 Random Graph Average Densities &\nPre-Migration Preiod Network Average Density") + 
+  ggtitle("Distribution of 5000 Random Graph Average Densities &\nPost-Migration Preiod Network Average Density") + 
   xlab("Average Density") +
   ylab("")
 
@@ -291,7 +291,7 @@ p.ecopost.degree <- ggplot(ecopost.degree, aes(x = unlist(ecopost.degree))) +
   geom_vline(xintercept = (mean(degree(BReco_g_post, mode = "all"))), 
              linetype = "dashed", color = "red") +
   geom_density() +
-  ggtitle("Distribution of Mean Degree in 5000 Random Models & \nPre-Migration Period Network Mean Degree") + 
+  ggtitle("Distribution of Mean Degree in 5000 Random Models & \nPost-Migration Period Network Mean Degree") + 
   xlab("Mean Degree") +
   ylab("")
 
@@ -299,7 +299,7 @@ p.ecopost.degree <- ggplot(ecopost.degree, aes(x = unlist(ecopost.degree))) +
 plot_grid(p.ecopost.pl, p.ecopost.trans, p.ecopost.density, p.ecopost.degree)
 
 # Calculate the proportion of graphs with an average path length lower than observed
-sum(ecopost.pl < mean_distance(BReco_g_post, directed = False))/5000*100
+sum(ecopost.pl < mean_distance(BReco_g_post, directed = FALSE))/5000*100
 
 # Calculate the proportion of graphs with a transitivity (mean clustering coefficient) 
 # lower than our observed
@@ -310,3 +310,104 @@ sum(ecopost.density < edge_density(BReco_g_post))/5000*100
 
 # Calculate the proportion of graphs with a mean degree lower than observed
 sum(ecopost.degree < mean(degree(BReco_g_post)))/5000*100
+
+#------------Across Time Randonmization for Post-Migration Period Economic BR------------####
+#-----------------------------------ACROSS TIME------------------------------------------#
+
+# Initiate empty list for assessing BR pre-migration average path length and transitivity
+gecoall <- vector('list', 5000)
+
+# Initiate empty list for assessing BR pre-migration density density and mean degree
+gecoall.d <- vector('list', 5000)
+
+# Populate gpre list with random graphs of same order and size
+for(i in 1:5000){
+  gecoall[[i]] <- erdos.renyi.game(n = gorder(BReco_g), p.or.m = gsize(BReco_g),
+                                    directed = FALSE, type = "gnm")
+}
+
+# Populate gecopre.d list with random graphs of same order and approximate density. A separate list 
+# of 5000 randon graphs is necessary for density and mean degree because these statistics would 
+# identical in random graphs of the same order and size as our observed graph. 
+# Instead, a probability of edge creation equal to the observed density is used. Further, 
+# only mean degree (as opposed to mean weighted degree) is used because Erdos-Renyi 
+# random graphs do not support weights. 
+for(i in 1:5000){
+  gecoall.d[[i]] <- erdos.renyi.game(n = gorder(BReco_g), p.or.m = edge_density(BReco_g), 
+                                      directed = FALSE, type = "gnp")
+}
+
+# Calculate average path length, transitivity (custering coefficient), density, and degree across 
+# the 5000 random pre-migration graphs
+ecoall.pl <- lapply(gecoall.d, mean_distance, directed = FALSE)
+ecoall.trans <- lapply(gecoall, transitivity)
+ecoall.density <- lapply(gecoall.d, edge_density)
+ecoall.degree <- lapply(gecoall.d, function(x){
+  y <- degree(x)
+  mean(y)
+}
+)
+
+# Unlist and change to a data frame for vizualizations
+ecoall.pl <- as.data.frame(unlist(ecoall.pl))
+ecoall.trans <- as.data.frame(unlist(ecoall.trans))
+ecoall.density <- as.data.frame(unlist(ecoall.density))
+ecoall.degree <- as.data.frame(unlist(ecoall.degree))
+
+# Plot the distribution of random graph's average shortest path lengths with the pre-migration 
+# BR network's ave. shortest path as line
+p.ecoall.pl <- ggplot(ecoall.pl, aes(x = unlist(ecoall.pl))) + 
+  geom_histogram(aes(y = ..density..), bins = 24) + 
+  geom_vline(xintercept = (mean_distance(BReco_g, directed = FALSE)), 
+             linetype = "dashed", color = "red") +
+  geom_density() +
+  ggtitle("Distribution of 5000 Random Graph Average Shortest Path Lengths & \nAverage Shortest Path Length Across Time in the CIRV") + 
+  xlab("Average Shortest Path Length") +
+  ylab("")
+
+# Plot the distribution of random graph's transitivity with the pre-migration BR network's 
+# transitivity path as line
+p.ecoall.trans <- ggplot(ecoall.trans, aes(x = unlist(ecoall.trans))) + 
+  geom_histogram(aes(y = ..density..), bins = 25) + 
+  geom_vline(xintercept = (transitivity(BReco_g)), linetype = "dashed", color = "red") +
+  geom_density() +
+  ggtitle("Distribution of Transitivity in 5000 Random Models & \nTransitivity Across Time in the CIRV") + 
+  xlab("Transitivity (or Clustering Coefficient)") +
+  ylab("")
+
+# Plot the distribution of random graph's average density with the pre-migration jar network's
+# ave. shortest path as line
+p.ecoall.density <- ggplot(ecoall.density, aes(x = unlist(ecoall.density))) + 
+  geom_histogram(aes(y = ..density..), bins = 24) + 
+  geom_vline(xintercept = (edge_density(BReco_g)), linetype = "dashed", color = "red") +
+  geom_density() +
+  ggtitle("Distribution of 5000 Random Graph Average Densities &\nAverage Density Across Time in the CIRV") + 
+  xlab("Average Density") +
+  ylab("")
+
+# Plot the distribution of random graph's mean degree with the pre-migration BR network's mean
+# degree path as line
+p.ecoall.degree <- ggplot(ecoall.degree, aes(x = unlist(ecoall.degree))) + 
+  geom_histogram(aes(y = ..density..), bins = 23) + 
+  geom_vline(xintercept = (mean(degree(BReco_g, mode = "all"))), 
+             linetype = "dashed", color = "red") +
+  geom_density() +
+  ggtitle("Distribution of Mean Degree in 5000 Random Models & \nMean Degree Across Time in the CIRV") + 
+  xlab("Mean Degree") +
+  ylab("")
+
+# Use plot_grid to plot all four graphs on the same grid
+plot_grid(p.ecoall.pl, p.ecoall.trans, p.ecoall.density, p.ecoall.degree)
+
+# Calculate the proportion of graphs with an average path length lower than observed
+sum(ecoall.pl < mean_distance(BReco_g, directed = FALSE))/5000*100
+
+# Calculate the proportion of graphs with a transitivity (mean clustering coefficient) 
+# lower than our observed
+sum(ecoall.trans < transitivity(BReco_g))/5000*100
+
+# Calculate the proportion of graphs with a density lower than our observed
+sum(ecoall.density < edge_density(BReco_g))/5000*100
+
+# Calculate the proportion of graphs with a mean degree lower than observed
+sum(ecoall.degree < mean(degree(BReco_g)))/5000*100
