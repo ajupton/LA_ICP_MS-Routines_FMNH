@@ -7,7 +7,6 @@ library(stringr)
 library(magrittr)
 
 # Determine path to file
-path <- "C:/Users/uptonaw/Dropbox/LA-ICP-MS Data Backup/___Calc_ALL RESULTS/all.xlsx"
 path <- "all.xlsx"
 
 # Use map to iterate read_excel over each worksheet in the workbook

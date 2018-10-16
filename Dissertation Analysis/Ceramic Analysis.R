@@ -1,6 +1,5 @@
 ##' Analysis of ceramic LA-ICP-MS data
 
-
 library(tidyverse)
 library(infer)
 library(broom)
@@ -170,7 +169,8 @@ var_exp_sample %>%
        title = "Variance explained by each principal component")
 
 # Check number of PCs to retain to reach 90% of the variability in the original dataset
-var_exp_sample %>% filter(cum_var_exp < 0.909) # Need to retain the first 12 PCs. 12 PCs is much less than 44 elements
+var_exp_sample %>% filter(cum_var_exp < 0.909) # Need to retain the first 12 PCs. 
+                                               # 12 PCs is much less than 44 elements
 
 # Plot the first two PCs with Geography_2 as group separation
 geo2_pc1pc2 <-sample_pca %>%
@@ -206,10 +206,11 @@ geo2_pc1pc2[[1]] + scale_fill_manual(values = c("black","black")) +
   scale_color_manual(values = c("black","black","black")) +
   scale_shape_manual(values=c(18, 2)) 
 
-# This shows significant overlap but a general trend that follows the clay: in general there is
-# less elemental enrichment in clay resources in the southern portion of the CIRV compared to the northern part
-# with the north-south line of demarcation being the Spoon-Illinois River confluence (clay along the Spoon 
-# is included in the north)
+# This shows significant overlap but a general trend that follows the clay: 
+# in general there is less elemental enrichment in clay resources in the 
+# southern portion of the CIRV compared to the northern part with the 
+# north-south line of demarcation being the Spoon-Illinois River confluence
+# (clay along the Spoon is included in the north)
 
 # Check the first two PCs with Sites as group separation
 site_pc1pc2 <- sample_pca %>%
@@ -277,10 +278,10 @@ vessel_pc1pc2 <- sample_pca %>%
   pull(pca_graph)
 
 ggplotly(vessel_pc1pc2[[1]])
-# The vessel graph is interesting. At first glance, it doesn't seem as though there is much in the way
-# of separation by vessel class, but there appears to be some nuances to that upon futher 
-# consideration. There are some plates that are low on both PC1 and PC2 axes as well as jars
-# that are significantly more enriched on PC1
+# The vessel graph is interesting. At first glance, it doesn't seem as though there is much 
+# in the way of separation by vessel class, but there appears to be some nuances to that  
+# upon futher consideration. There are some plates that are low on both PC1 and PC2 axes 
+# as well as jars that are significantly more enriched on PC1
 
 # How about separation by time?
 time_pc1pc2 <- sample_pca %>%
@@ -416,9 +417,10 @@ tempsize_pc1pc2 <- sample_pca %>%
   pull(pca_graph)
 
 ggplotly(tempsize_pc1pc2[[1]])
-# Interestingly, it appears that the smallest temper size only appears in the northern part of the valley. 
-# That might suggest that there is either a preference for smaller temper grains there or it is a 
-# response to the clay available in the north. 
+# Interestingly, it appears that the smallest temper size only appears in 
+# the northern part of the valley. 
+# That might suggest that there is either a preference for smaller temper grains there 
+# or it is a response to the clay available in the north. 
 
 # Finally, let's check Cultural Group
 culture_pc1pc2 <- sample_pca %>%
@@ -463,12 +465,12 @@ Mo_Mn_Si <- plot_ly(sample_new_pcaready, x = ~Mo, y = ~Mn, z = ~Si, color = ~Geo
 ggplotly(ggplot(sample_new_pcaready, aes(x = Mo, y = Mg, color = Date)) + 
   stat_ellipse(aes(color = Geography_2)) + geom_text(aes(label = Date), size = 2))
 
-# All in all, only a general trend of the north-south distinction holds when considering prior information
-# on PC1-PC2 biplots. That distinction is marked by significant overlap. We'll consider that when
-# running group membership probabilities. But first, it's necessary to explore how a variety of 
-# statistical methods will group the data. We'll append that group information to our PC list such that
-# we can consider both prior information and statistical infomation in groups before moving on to 
-# group refinement. 
+# All in all, only a general trend of the north-south distinction holds when considering 
+# prior information on PC1-PC2 biplots. That distinction is marked by significant overlap. 
+# We'll consider that when running group membership probabilities. But first, it's 
+# necessary to explore how a variety of statistical methods will group the data. We'll 
+# append that group information to our PC list such that we can consider both prior 
+# information and statistical infomation in groups before moving on to group refinement. 
 
 
 ########################## Cluster Analysis ########################
@@ -535,7 +537,8 @@ completehc1_dend <- as.dendrogram(completehc1)
 
 # Plot Complete linkage dendrogram cut at 2.4, which results in 6 clusters (3 main and 3 minor)
 completehc1_dend_2.4 <- color_branches(completehc1_dend, h = 2.4)
-plot(completehc1_dend_2.4, cex.axis = 0.75, cex.lab = 0.75, nodePar = list(lab.cex = 0.15, pch = NA))
+plot(completehc1_dend_2.4, cex.axis = 0.75, cex.lab = 0.75, 
+     nodePar = list(lab.cex = 0.15, pch = NA))
 complete_dist_groups <- cutree(completehc1_dend, h = 2.4)
 table(complete_dist_groups)
 sample_new_stat_clusters <- sample_new_stat_clusters %>%
@@ -553,7 +556,7 @@ fviz_cluster(list(data = sample_new_distready, cluster = complete_dist_groups))
 ##### K-means Cluster Analysis #####
 # First, it's a good idea to use a few methods to assess the number of clusters to model
 # Elbow Method
-fviz_nbclust(sample_new_distready, kmeans, method = "wss") # 3 - 8 optimal clusters; 3-4 looks good
+fviz_nbclust(sample_new_distready, kmeans, method = "wss") # 3-8 optimal clusters; 3-4 looks good
 # Silhouette Method
 fviz_nbclust(sample_new_distready, kmeans, method = "silhouette") # 3 optimal clusters
 # Gap Stat
@@ -664,7 +667,8 @@ group.mem.probs <- function(x2.l,attr1.grp,grps) {
     
     for (j in 1:length(grps2)) {
       p.val2 <- NULL
-      for (i in 1:nrow(x)) {p.val2[i] <- HotellingsT2(x[i,],x2.l[which(attr1.grp == grps2[j]),])$p.value}
+      for (i in 1:nrow(x)) {p.val2[i] <- HotellingsT2(x[i,],
+                                                      x2.l[which(attr1.grp == grps2[j]),])$p.value}
       probs[[m]][,which(grps == grps2[j])] <- round(p.val2, 5)*100}}
   return(probs)
 }
