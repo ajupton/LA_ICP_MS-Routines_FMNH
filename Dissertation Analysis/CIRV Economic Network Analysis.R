@@ -9,7 +9,7 @@ library(cowplot)
 
 #----------------------------Economic BR Network Stats----------------------------####
 
-# Read in finalized, undirected plate BR edgelist 
+# Read in finalized, undirected economic BR edgelist 
 BReco_el_un <- read_csv("Econet_BR_UNDIRECTED_edgelist_complete_.csv")
 
 # Read in finalized, undirected pre-migration BR edgelist
