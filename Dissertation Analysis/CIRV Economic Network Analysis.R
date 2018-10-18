@@ -72,6 +72,10 @@ mean(strength(BReco_g))
 mean(strength(BReco_g_pre))
 mean(strength(BReco_g_post))
 
+## The following network statistics were calculated in Gephi 0.9.2:
+# Average Degree, Avg. Weighted Degree, Avg. Clustering Coefficient, Avg. Path Length, 
+# Graph Density, Network Diameter
+
 #---------------------------Edge Betweenness Community Detection-------------------####
 
 # Edge betweenness extends the concept of vertex betweenness centrality to edges by 

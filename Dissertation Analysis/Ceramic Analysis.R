@@ -2569,8 +2569,8 @@ group_assign_by_site <- pca_aug %>%
 
 # Table of all group assignments by site AND geography
 group_assign_by_site_geo <- pca_aug %>%
-                              select(Sample, Site, Final_Assign, Geography_2) %>%
-                              group_by(Final_Assign, Site, Geography_2) %>%
+                              select(Sample, Site, Final_Assign, Geography_2, Time) %>%
+                              group_by(Final_Assign, Site, Geography_2, Time) %>%
                               summarize(count = n()) %>%
                               spread(Final_Assign, count)
 
@@ -2583,6 +2583,24 @@ group_assign_by_geo_class <- pca_aug %>%
 # Confirm assignments
 colSums(group_assign_by_site[, -1], na.rm = TRUE)
 table(pca_aug$Final_Assign)  
+
+# Regression of the number of compositional groups as a function of sample size
+# Also included are lines to look at potential differences in the average number of 
+# compositional groups by geography of site or time period of occupation
+group_assign_by_site %>%
+  select(1, 3:8) %>%
+  mutate(group_count = rowSums(!is.na(.))) %>%
+  mutate(group_count = group_count - 1) %>% # need to subtract the Site col
+  #left_join(group_assign_by_site_geo[c(1:3)]) %>%
+  #group_by(Geography_2, Time) %>%
+  #summarize(avg_grou = mean(group_count)) # check average group count
+  mutate(sample_size = rowSums(.[2:7], na.rm = TRUE)) %>%
+  #ggplot(aes(x = sample_size, y = group_count)) +
+  #geom_point() +
+  #geom_smooth(method = "lm")
+  lm(group_count ~ sample_size, data = .) %>%
+  glance() 
+
 
 # Write out csv file of group assignments
 # write_csv(group_assign_by_site, "group assignments by site.csv")

@@ -377,8 +377,6 @@ write_csv(econet_el_BR_all_time_complete, "Economic_network_BR_edgelist_complete
 
 #### Undirected Economic Networks ####
 
-
-
 # The edgelists created thus far have been directed. Since we are disregarding 
 # directionality, it is imporant to account for duplicate edges. 
 BRgraph_un <- graph_from_adjacency_matrix(eco_BR, weighted = T, mode = "undirected")

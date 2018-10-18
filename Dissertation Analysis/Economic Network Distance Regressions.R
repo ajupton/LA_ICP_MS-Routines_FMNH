@@ -188,6 +188,14 @@ summary(lm(weight ~ Distance, data = BReco_el_un_post)) # for each 1 km increase
 summary(lm(weight ~ Distance, data = BReco_el_un_post))$coefficients # post p-value of 0.5499, fail 
 # to reject null - no significant linear relationship b/t distance and weight in post
 
+# Check r.squared
+glance(lm(weight ~ Distance, data = BReco_el_un))
+glance(lm(weight ~ Distance, data = BReco_el_un_pre))
+glance(lm(weight ~ Distance, data = BReco_el_un_post))
+
+ggplot(BReco_el_un_post, aes(Distance, weight)) + geom_point() + geom_smooth()
+ggplot(BReco_el_un_pre, aes(Distance, weight)) + geom_point() + geom_smooth()
+
 # Check correlations
 cor(BReco_el_un$Distance, BReco_el_un$weight)
 cor(BReco_el_un_pre$Distance, BReco_el_un_pre$weight)
