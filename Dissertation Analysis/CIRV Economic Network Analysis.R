@@ -315,6 +315,12 @@ sum(ecopost.density < edge_density(BReco_g_post))/5000*100
 # Calculate the proportion of graphs with a mean degree lower than observed
 sum(ecopost.degree < mean(degree(BReco_g_post)))/5000*100
 
+# There is a change from the pre-migration to post-migration period centralization scores
+# Let's check to see which site-nodes are driving that change
+betweenness(BReco_g_post, directed = FALSE)
+closeness(BReco_g_post)
+
+
 #------------Across Time Randonmization for Post-Migration Period Economic BR------------####
 #-----------------------------------ACROSS TIME------------------------------------------#
 
